@@ -1,9 +1,16 @@
+
 import logging
+
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from drf_spectacular.utils import extend_schema
+
+from drf_spectacular.utils import (
+    extend_schema,
+    OpenApiParameter,
+    OpenApiTypes,
+)
 
 from users.serializers.change_status_serializer import ChangeStatusSerializer
 from users.serializers.login_serializer import LoginSerializer
@@ -12,7 +19,7 @@ from users.serializers.register_user_serializer import RegisterUserSerializer
 from users.serializers.update_user_serializer import UpdateUserSerializer
 from users.serializers.response_serializers import (
     LoginResponseSerializer,
-    RegisterUserResponseSerializer
+    RegisterUserResponseSerializer,
 )
 from users.services.user_service import UserService
 
@@ -22,20 +29,31 @@ logger = logging.getLogger(__name__)
 
 class UserViewSet(viewsets.ViewSet):
     """
-    API de Usuários
+    API de Usuários.
 
     Endpoints para autenticação e gerenciamento de usuários.
     """
 
     def get_permissions(self):
-        if self.action in [
-            "login",
-            "create",
-            "create_admin"
-        ]:
+        if self.action in ["login", "create"]:
             return [AllowAny()]
 
-        return super().get_permissions()
+        return [IsAuthenticated()]
+
+    def get_serializer_class(self):
+        """
+        Informa ao Swagger qual serializer utilizar
+        em cada ação do UserViewSet.
+        """
+        serializers = {
+            "login": LoginSerializer,
+            "create": RegisterUserSerializer,
+            "create_admin": RegisterAdminSerializer,
+            "change_status": ChangeStatusSerializer,
+            "update_profile": UpdateUserSerializer,
+        }
+
+        return serializers.get(self.action)
 
     @extend_schema(
         summary="Fazer Login",
@@ -43,8 +61,9 @@ class UserViewSet(viewsets.ViewSet):
         request=LoginSerializer,
         responses={
             200: LoginResponseSerializer,
-            400: {"description": "Dados inválidos"}
-        }
+            400: {"description": "Dados inválidos"},
+            401: {"description": "Telefone ou senha incorretos"},
+        },
     )
     @action(detail=False, methods=["post"])
     def login(self, request):
@@ -54,12 +73,11 @@ class UserViewSet(viewsets.ViewSet):
         dto = serializer.to_dto()
         result = UserService.login(dto)
 
-
-        logger.info(f" [HTTP 200 OK] Login efetuado com sucesso para o usuário com telefone '{dto.phone}'.")
+        logger.info("[HTTP 200 OK] Login realizado com sucesso.")
 
         return Response(
             result,
-            status=status.HTTP_200_OK
+            status=status.HTTP_200_OK,
         )
 
     @extend_schema(
@@ -68,8 +86,8 @@ class UserViewSet(viewsets.ViewSet):
         request=RegisterUserSerializer,
         responses={
             201: RegisterUserResponseSerializer,
-            400: {"description": "Dados inválidos"}
-        }
+            400: {"description": "Dados inválidos"},
+        },
     )
     def create(self, request):
         serializer = RegisterUserSerializer(data=request.data)
@@ -78,13 +96,14 @@ class UserViewSet(viewsets.ViewSet):
         dto = serializer.to_dto()
         result = UserService.create_user(dto)
 
-
-        user_name = result.get('user', {}).get('name', dto.name)
-        logger.info(f" [HTTP 201 Created] Novo usuário '{user_name}' e sua fazenda foram persistidos no banco de dados!")
+        logger.info(
+            "[HTTP 201 Created] Novo usuário e sua fazenda "
+            "foram persistidos no banco de dados."
+        )
 
         return Response(
             result,
-            status=status.HTTP_201_CREATED
+            status=status.HTTP_201_CREATED,
         )
 
     @extend_schema(
@@ -93,113 +112,328 @@ class UserViewSet(viewsets.ViewSet):
         request=RegisterAdminSerializer,
         responses={
             201: RegisterUserResponseSerializer,
-            400: {"description": "Dados inválidos"}
-        }
+            400: {"description": "Dados inválidos"},
+            403: {"description": "Acesso negado"},
+        },
     )
     @action(
         detail=False,
         methods=["post"],
-        url_path="admins"
+        url_path="admins",
     )
     def create_admin(self, request):
         serializer = RegisterAdminSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         dto = serializer.to_dto()
+
+        if dto.requested_by != request.user.id:
+            logger.warning(
+                "[HTTP 403 Forbidden] Tentativa de criação de "
+                "administrador com solicitante diferente do usuário autenticado."
+            )
+            return Response(
+                {
+                    "message": (
+                        "Você não tem permissão para realizar esta operação."
+                    )
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if not request.user.is_admin:
+            logger.warning(
+                "[HTTP 403 Forbidden] Usuário sem permissão "
+                "tentou criar um administrador."
+            )
+            return Response(
+                {
+                    "message": (
+                        "Apenas administradores podem criar administradores."
+                    )
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         result = UserService.create_admin(dto)
 
-
-        logger.info(f" [HTTP 201 Created] Administrador '{dto.name}' registrado e persistido no PostgreSQL!")
+        logger.info(
+            "[HTTP 201 Created] Novo administrador registrado "
+            "com sucesso no banco de dados."
+        )
 
         return Response(
             result,
-            status=status.HTTP_201_CREATED
+            status=status.HTTP_201_CREATED,
         )
 
     @extend_schema(
-        summary="Listar Administradores"
+        summary="Listar Administradores",
+        description=(
+            "Lista os administradores cadastrados. "
+            "A operação exige autenticação e autorização de administrador."
+        ),
+        parameters=[
+            OpenApiParameter(
+                name="requested_by",
+                type=int,
+                location=OpenApiParameter.QUERY,
+                required=True,
+                description="ID do usuário solicitante.",
+            ),
+        ],
+        responses={
+            200: OpenApiTypes.OBJECT,
+            400: {"description": "requested_by é obrigatório"},
+            403: {"description": "Acesso negado"},
+        },
     )
     @action(
         detail=False,
         methods=["get"],
-        url_path="admins/list"
+        url_path="admins/list",
     )
     def list_admins(self, request):
         requested_by = request.query_params.get("requested_by")
+
+        if not requested_by:
+            return Response(
+                {"message": "requested_by é obrigatório"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if str(requested_by) != str(request.user.id):
+            logger.warning(
+                "[HTTP 403 Forbidden] Tentativa de listar administradores "
+                "com solicitante diferente do usuário autenticado."
+            )
+            return Response(
+                {
+                    "message": (
+                        "Você não tem permissão para realizar esta operação."
+                    )
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if not request.user.is_admin:
+            logger.warning(
+                "[HTTP 403 Forbidden] Usuário sem permissão "
+                "tentou listar administradores."
+            )
+            return Response(
+                {
+                    "message": (
+                        "Apenas administradores podem realizar esta operação."
+                    )
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         result = UserService.list_admins(requested_by)
 
-        logger.info(" [HTTP 200 OK] Consulta de administradores realizada no banco de dados.")
+        logger.info(
+            "[HTTP 200 OK] Consulta de administradores realizada "
+            "com sucesso no banco de dados."
+        )
 
         return Response(
             result,
-            status=status.HTTP_200_OK
+            status=status.HTTP_200_OK,
         )
 
     @extend_schema(
-        summary="Listar Usuários"
+        summary="Listar Usuários",
+        description=(
+            "Lista os usuários cadastrados. "
+            "A operação exige autenticação e autorização de administrador."
+        ),
+        parameters=[
+            OpenApiParameter(
+                name="requested_by",
+                type=int,
+                location=OpenApiParameter.QUERY,
+                required=True,
+                description="ID do usuário solicitante.",
+            ),
+        ],
+        responses={
+            200: OpenApiTypes.OBJECT,
+            400: {"description": "requested_by é obrigatório"},
+            403: {"description": "Acesso negado"},
+        },
     )
     def list(self, request):
         requested_by = request.query_params.get("requested_by")
+
+        if not requested_by:
+            return Response(
+                {"message": "requested_by é obrigatório"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if str(requested_by) != str(request.user.id):
+            logger.warning(
+                "[HTTP 403 Forbidden] Tentativa de listar usuários "
+                "com solicitante diferente do usuário autenticado."
+            )
+            return Response(
+                {
+                    "message": (
+                        "Você não tem permissão para realizar esta operação."
+                    )
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if not request.user.is_admin:
+            logger.warning(
+                "[HTTP 403 Forbidden] Usuário sem permissão "
+                "tentou listar usuários."
+            )
+            return Response(
+                {
+                    "message": (
+                        "Apenas administradores podem realizar esta operação."
+                    )
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         result = UserService.list_users(requested_by)
 
-        logger.info(" [HTTP 200 OK] Consulta de usuários cadastrados realizada no banco de dados.")
+        logger.info(
+            "[HTTP 200 OK] Consulta de usuários cadastrados "
+            "realizada com sucesso no banco de dados."
+        )
 
         return Response(
             result,
-            status=status.HTTP_200_OK
+            status=status.HTTP_200_OK,
         )
 
     @extend_schema(
         summary="Alterar Status do Usuário",
-        request=ChangeStatusSerializer
+        description="Altera o status de um usuário.",
+        request=ChangeStatusSerializer,
+        responses={
+            200: OpenApiTypes.OBJECT,
+            400: {"description": "Dados inválidos"},
+            403: {"description": "Acesso negado"},
+        },
     )
     @action(
         detail=False,
         methods=["patch"],
-        url_path="status"
+        url_path="status",
     )
     def change_status(self, request):
         serializer = ChangeStatusSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         dto = serializer.to_dto()
+
+        if dto.requested_by != request.user.id:
+            logger.warning(
+                "[HTTP 403 Forbidden] Tentativa de alteração de status "
+                "com solicitante diferente do usuário autenticado."
+            )
+            return Response(
+                {
+                    "message": (
+                        "Você não tem permissão para realizar esta operação."
+                    )
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if not request.user.is_admin:
+            logger.warning(
+                "[HTTP 403 Forbidden] Usuário sem permissão "
+                "tentou alterar o status de outro usuário."
+            )
+            return Response(
+                {
+                    "message": (
+                        "Apenas administradores podem realizar esta operação."
+                    )
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         result = UserService.change_status(dto)
 
-        logger.info(f" [HTTP 200 OK] Status do usuário ID {dto.user_id} atualizado com sucesso no banco.")
+        logger.info(
+            "[HTTP 200 OK] Status do usuário ID %s atualizado com sucesso.",
+            dto.user_id,
+        )
 
         return Response(
             result,
-            status=status.HTTP_200_OK
+            status=status.HTTP_200_OK,
         )
 
     @extend_schema(
         summary="Atualizar Dados Cadastrais",
-        description="Atualiza os dados de perfil e fazenda do usuário autenticado.",
+        description=(
+            "Atualiza os dados de perfil e fazenda "
+            "do usuário autenticado."
+        ),
         request=UpdateUserSerializer,
         responses={
             200: RegisterUserResponseSerializer,
             400: {"description": "Dados inválidos"},
-            404: {"description": "Usuário não encontrado"}
-        }
+            403: {"description": "Acesso negado"},
+            404: {"description": "Usuário não encontrado"},
+        },
     )
     @action(
         detail=False,
         methods=["patch"],
-        url_path="profile"
+        url_path="profile",
     )
     def update_profile(self, request):
+        """
+        Atualiza os dados cadastrais do usuário autenticado.
+        """
         serializer = UpdateUserSerializer(
             data=request.data,
-            partial=True
+            partial=True,
         )
+
         serializer.is_valid(raise_exception=True)
 
         dto = serializer.to_dto()
+
+        if dto.user_id is None:
+            return Response(
+                {"message": "user_id é obrigatório."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if str(dto.user_id) != str(request.user.id):
+            logger.warning(
+                "[HTTP 403 Forbidden] Tentativa de alterar perfil "
+                "de outro usuário."
+            )
+            return Response(
+                {
+                    "message": (
+                        "Você não tem permissão para alterar este perfil."
+                    )
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         result = UserService.update_user(dto)
 
-        logger.info(f" [HTTP 200 OK] Perfil e dados da fazenda do usuário ID {dto.user_id} atualizados no banco.")
+        logger.info(
+            "[HTTP 200 OK] Perfil e dados da fazenda do usuário "
+            "ID %s atualizados com sucesso.",
+            dto.user_id,
+        )
 
         return Response(
             result,
-            status=status.HTTP_200_OK
+            status=status.HTTP_200_OK,
         )

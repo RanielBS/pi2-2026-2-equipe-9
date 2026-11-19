@@ -41,7 +41,7 @@ services:
       DB_SSL: "disable"
 
     volumes:
-      - ./api/media:/app/media
+      - ./api:/app
       - ./seed.sql:/app/seed.sql
 
     depends_on:
