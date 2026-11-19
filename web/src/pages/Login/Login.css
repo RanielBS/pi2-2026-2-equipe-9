@@ -56,8 +56,8 @@
 
 body {
     font-family: 'Montserrat', sans-serif;
-    background: linear-gradient(90deg, #000000, #009963);
-
+    background: #012418;
+    background-image: none;
     margin: 0;
     padding: 0;
 }
@@ -91,6 +91,7 @@ body {
 #title {
     display: flex;
     width: 100%;
+    margin-top: 20px;
 }
 
 .textos {
@@ -100,6 +101,7 @@ body {
     font-weight: 800;
     color: #ffffff;
     width: 100%;
+    margin-top: 20px;
 }
 
 /* INPUTS */
@@ -251,6 +253,24 @@ body {
     cursor: pointer;
 
     transition: 0.3s;
+}
+
+#esqSenha {
+    border: none;
+    color: #ffffff;
+    background-color: transparent;
+
+    font-size: 14px;
+    font-weight: 300;
+    font-family: 'Montserrat', sans-serif;
+
+    cursor: pointer;
+
+    transition: 0.3s;
+}
+
+#esqSenha:hover {
+    text-decoration: underline;
 }
 
 #entrar:hover,
@@ -405,4 +425,39 @@ body {
 
 .recall-forget a:hover {
   text-decoration: underline;
+}
+
+.login-erro-banner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: #b3261e; /* Vermelho escuro Figma */
+  color: #ffffff;
+  padding: 6px 18px;
+  border-radius: 999px; /* Formato pílula */
+  margin: 15px auto 20px auto;
+  font-size: 14px;
+  font-weight: 500;
+  border: none;
+  box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.login-erro-banner p {
+  margin: 0;
+  color: #ffffff;
+}
+
+.login-erro-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  background-color: #ffffff;
+  color: #b3261e;
+  border-radius: 50%;
+  font-weight: bold;
+  font-size: 12px;
+  line-height: 1;
 }

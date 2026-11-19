@@ -8,6 +8,7 @@ const useAnalysisStore = create((set) => ({
   analysis: null,
   searchRequestId: null,
   analysisHistory: [],
+  pendingAnalyses: [],
 
   createAnalysis: async (image, userId) => {
     set({ loading: true, error: null });
@@ -86,6 +87,52 @@ const useAnalysisStore = create((set) => ({
     } catch (err) {
       set({
         error: err.message || "Erro ao buscar análise",
+        loading: false,
+      });
+
+      throw err;
+    }
+  },
+
+  // ==================== NOVAS AÇÕES (TÉCNICO AGRÍCOLA) ====================
+
+  // Buscar fila de análises pendentes para o técnico
+  fetchPendingAnalyses: async () => {
+    set({ loading: true, error: null });
+
+    try {
+      const response = await api.get("analysis/pending/");
+      const data = response.data;
+
+      set({
+        pendingAnalyses: data,
+        loading: false,
+      });
+
+      return data;
+    } catch (err) {
+      set({
+        error: err.response?.data?.detail || err.message || "Erro ao carregar a fila de trabalho",
+        loading: false,
+      });
+
+      throw err;
+    }
+  },
+
+  // Enviar parecer técnico e validação do diagnóstico
+  submitTechnicalReview: async (analysisId, reviewData) => {
+    set({ loading: true, error: null });
+
+    try {
+      const response = await api.patch(`analysis/${analysisId}/review/`, reviewData);
+      const data = response.data;
+
+      set({ loading: false });
+      return data;
+    } catch (err) {
+      set({
+        error: err.response?.data?.detail || err.message || "Erro ao enviar o parecer técnico",
         loading: false,
       });
 
