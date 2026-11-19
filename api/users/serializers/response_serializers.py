@@ -1,9 +1,11 @@
+
 from rest_framework import serializers
 
 
 class FarmResponseSerializer(serializers.Serializer):
     """Serializer para resposta de dados da fazenda."""
     name = serializers.CharField()
+    state = serializers.CharField(required=False)
     location = serializers.CharField()
     municipality = serializers.CharField()
 
@@ -14,6 +16,15 @@ class UserResponseSerializer(serializers.Serializer):
     name = serializers.CharField()
     phone = serializers.CharField()
     is_admin = serializers.BooleanField()
+    role = serializers.CharField(required=False)
+    professional_register = serializers.CharField(
+        required=False,
+        allow_null=True
+    )
+    specialty = serializers.CharField(
+        required=False,
+        allow_null=True
+    )
     status = serializers.CharField()
     farm = FarmResponseSerializer(required=False, allow_null=True)
 

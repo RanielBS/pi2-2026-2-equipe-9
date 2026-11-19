@@ -1,4 +1,6 @@
 
+import logging
+
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -20,6 +22,9 @@ from users.serializers.response_serializers import (
     RegisterUserResponseSerializer,
 )
 from users.services.user_service import UserService
+
+
+logger = logging.getLogger(__name__)
 
 
 class UserViewSet(viewsets.ViewSet):
@@ -68,6 +73,8 @@ class UserViewSet(viewsets.ViewSet):
         dto = serializer.to_dto()
         result = UserService.login(dto)
 
+        logger.info("[HTTP 200 OK] Login realizado com sucesso.")
+
         return Response(
             result,
             status=status.HTTP_200_OK,
@@ -88,6 +95,11 @@ class UserViewSet(viewsets.ViewSet):
 
         dto = serializer.to_dto()
         result = UserService.create_user(dto)
+
+        logger.info(
+            "[HTTP 201 Created] Novo usuário e sua fazenda "
+            "foram persistidos no banco de dados."
+        )
 
         return Response(
             result,
@@ -116,6 +128,10 @@ class UserViewSet(viewsets.ViewSet):
         dto = serializer.to_dto()
 
         if dto.requested_by != request.user.id:
+            logger.warning(
+                "[HTTP 403 Forbidden] Tentativa de criação de "
+                "administrador com solicitante diferente do usuário autenticado."
+            )
             return Response(
                 {
                     "message": (
@@ -126,6 +142,10 @@ class UserViewSet(viewsets.ViewSet):
             )
 
         if not request.user.is_admin:
+            logger.warning(
+                "[HTTP 403 Forbidden] Usuário sem permissão "
+                "tentou criar um administrador."
+            )
             return Response(
                 {
                     "message": (
@@ -136,6 +156,11 @@ class UserViewSet(viewsets.ViewSet):
             )
 
         result = UserService.create_admin(dto)
+
+        logger.info(
+            "[HTTP 201 Created] Novo administrador registrado "
+            "com sucesso no banco de dados."
+        )
 
         return Response(
             result,
@@ -178,6 +203,10 @@ class UserViewSet(viewsets.ViewSet):
             )
 
         if str(requested_by) != str(request.user.id):
+            logger.warning(
+                "[HTTP 403 Forbidden] Tentativa de listar administradores "
+                "com solicitante diferente do usuário autenticado."
+            )
             return Response(
                 {
                     "message": (
@@ -188,6 +217,10 @@ class UserViewSet(viewsets.ViewSet):
             )
 
         if not request.user.is_admin:
+            logger.warning(
+                "[HTTP 403 Forbidden] Usuário sem permissão "
+                "tentou listar administradores."
+            )
             return Response(
                 {
                     "message": (
@@ -198,6 +231,11 @@ class UserViewSet(viewsets.ViewSet):
             )
 
         result = UserService.list_admins(requested_by)
+
+        logger.info(
+            "[HTTP 200 OK] Consulta de administradores realizada "
+            "com sucesso no banco de dados."
+        )
 
         return Response(
             result,
@@ -235,6 +273,10 @@ class UserViewSet(viewsets.ViewSet):
             )
 
         if str(requested_by) != str(request.user.id):
+            logger.warning(
+                "[HTTP 403 Forbidden] Tentativa de listar usuários "
+                "com solicitante diferente do usuário autenticado."
+            )
             return Response(
                 {
                     "message": (
@@ -245,6 +287,10 @@ class UserViewSet(viewsets.ViewSet):
             )
 
         if not request.user.is_admin:
+            logger.warning(
+                "[HTTP 403 Forbidden] Usuário sem permissão "
+                "tentou listar usuários."
+            )
             return Response(
                 {
                     "message": (
@@ -255,6 +301,11 @@ class UserViewSet(viewsets.ViewSet):
             )
 
         result = UserService.list_users(requested_by)
+
+        logger.info(
+            "[HTTP 200 OK] Consulta de usuários cadastrados "
+            "realizada com sucesso no banco de dados."
+        )
 
         return Response(
             result,
@@ -283,6 +334,10 @@ class UserViewSet(viewsets.ViewSet):
         dto = serializer.to_dto()
 
         if dto.requested_by != request.user.id:
+            logger.warning(
+                "[HTTP 403 Forbidden] Tentativa de alteração de status "
+                "com solicitante diferente do usuário autenticado."
+            )
             return Response(
                 {
                     "message": (
@@ -293,6 +348,10 @@ class UserViewSet(viewsets.ViewSet):
             )
 
         if not request.user.is_admin:
+            logger.warning(
+                "[HTTP 403 Forbidden] Usuário sem permissão "
+                "tentou alterar o status de outro usuário."
+            )
             return Response(
                 {
                     "message": (
@@ -303,6 +362,11 @@ class UserViewSet(viewsets.ViewSet):
             )
 
         result = UserService.change_status(dto)
+
+        logger.info(
+            "[HTTP 200 OK] Status do usuário ID %s atualizado com sucesso.",
+            dto.user_id,
+        )
 
         return Response(
             result,
@@ -348,6 +412,10 @@ class UserViewSet(viewsets.ViewSet):
             )
 
         if str(dto.user_id) != str(request.user.id):
+            logger.warning(
+                "[HTTP 403 Forbidden] Tentativa de alterar perfil "
+                "de outro usuário."
+            )
             return Response(
                 {
                     "message": (
@@ -358,6 +426,12 @@ class UserViewSet(viewsets.ViewSet):
             )
 
         result = UserService.update_user(dto)
+
+        logger.info(
+            "[HTTP 200 OK] Perfil e dados da fazenda do usuário "
+            "ID %s atualizados com sucesso.",
+            dto.user_id,
+        )
 
         return Response(
             result,
