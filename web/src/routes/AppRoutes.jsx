@@ -10,7 +10,7 @@ import Historico from "../pages/Historico/Historico";
 import Retorno from "../pages/Retorno/Retorno";
 import Resultado from "../pages/Resultado/Resultado";
 
-import Cadastrar from "../pages/Cadastro/Cadastrar";
+import CadastroProdutor from "../pages/Cadastro/CadastroProdutor";
 import Propriedade from "../pages/Cadastro/Propriedade";
 import OpcoesCad from "../pages/Cadastro/OpcoesCad";
 import CadastroTecnico from "../pages/Cadastro/CadastroTecnico";
@@ -28,7 +28,8 @@ export default function AppRoutes() {
       {/* Rotas públicas */}
       <Route path="/" element={<Login />} />
       <Route path="/cadastro" element={<OpcoesCad />} />
-      <Route path="/cadastroProdutor" element={<Cadastrar />} />
+      <Route path="/cadastroProdutor" element={<CadastroProdutor />} />
+      <Route path="/opcoesCadastro" element={<OpcoesCad />} />
       <Route path="/cadastroTecnico" element={<CadastroTecnico />} />
       <Route path="/propriedade" element={<Propriedade />} />
 

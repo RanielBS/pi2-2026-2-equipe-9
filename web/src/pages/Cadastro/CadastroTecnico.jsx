@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useAuthStore from "../../stores/authStore";
@@ -19,6 +20,18 @@ export default function CadastroTecnico() {
   const finalizar = async (e) => {
     e.preventDefault();
 
+    if (
+      !nome.trim() ||
+      !telefone.trim() ||
+      !registroProfissional.trim() ||
+      !especialidade ||
+      !senha ||
+      !confirmarSenha
+    ) {
+      setErro("Preencha todos os campos obrigatórios.");
+      return;
+    }
+
     if (senha.length < 6) {
       setErro("A senha deve ter no mínimo 6 caracteres.");
       return;
@@ -30,36 +43,47 @@ export default function CadastroTecnico() {
     }
 
     if (!aceitouTermos) {
-  setErro("Você precisa aceitar os termos para continuar.");
-  return;
-}
+      setErro("Você precisa aceitar os termos para continuar.");
+      return;
+    }
 
     setErro("");
 
     try {
       await register({
-        name: nome,
-        phone: telefone,
+        name: nome.trim(),
+        phone: telefone.trim(),
         password: senha,
         confirm_password: confirmarSenha,
         accept_terms: aceitouTermos,
-        professional_register: registroProfissional,
+        professional_register: registroProfissional.trim(),
         specialty: especialidade,
-        role: "tecnico",       
+        role: "tecnico",
       });
 
-      
       alert("Cadastro feito com sucesso!");
       navigate("/");
     } catch (err) {
-      alert("Erro no cadastro");
+      console.error("Erro no cadastro técnico:", err);
+
+      const mensagem =
+        err.response?.data?.message ||
+        err.response?.data?.detail ||
+        "Erro no cadastro. Verifique os dados e tente novamente.";
+
+      setErro(mensagem);
     }
   };
 
   return (
     <div className="cadastro-container">
       <h3>Cadastro de Técnico</h3>
-      <button className="voltar" onClick={() => navigate("/cadastro")}>
+
+      <button
+        type="button"
+        className="voltar"
+        onClick={() => navigate("/cadastro")}
+      >
         Voltar
       </button>
 
@@ -87,7 +111,10 @@ export default function CadastroTecnico() {
             type="tel"
             placeholder="Digite o seu número"
             value={telefone}
-            onChange={(e) => setTelefone(e.target.value)}
+            onChange={(e) => {
+              setTelefone(e.target.value);
+              if (erro) setErro("");
+            }}
           />
         </div>
 
@@ -97,18 +124,40 @@ export default function CadastroTecnico() {
             type="text"
             placeholder="Digite o número do seu registro"
             value={registroProfissional}
-            onChange={(e) => setRegistroProfissional(e.target.value)}
+            onChange={(e) => {
+              setRegistroProfissional(e.target.value);
+              if (erro) setErro("");
+            }}
           />
         </div>
 
         <div className="campo">
           <label>Especialidade</label>
-          <input
-            type="text"
-            placeholder="Ex: Agronomia, Zootecnia, Veterinária"
+          <select
             value={especialidade}
-            onChange={(e) => setEspecialidade(e.target.value)}
-          />
+            onChange={(e) => {
+              setEspecialidade(e.target.value);
+              if (erro) setErro("");
+            }}
+          >
+            <option value="">Selecione uma especialidade</option>
+            <option value="Agronomia">Agronomia</option>
+            <option value="Zootecnia">Zootecnia</option>
+            <option value="Medicina Veterinária">
+              Medicina Veterinária
+            </option>
+            <option value="Engenharia Florestal">
+              Engenharia Florestal
+            </option>
+            <option value="Técnico em Agropecuária">
+              Técnico em Agropecuária
+            </option>
+            <option value="Botânica / Biologia">
+              Botânica / Biologia
+            </option>
+            <option value="Academico na area">Acadêmico na área</option>
+            <option value="Outra">Outra</option>
+          </select>
         </div>
 
         <div className="campo">
@@ -137,16 +186,22 @@ export default function CadastroTecnico() {
           />
         </div>
 
-<div className="campo">
-  <label>
-    <input
-      type="checkbox"
-      checked={aceitouTermos}
-      onChange={(e) => setAceitouTermos(e.target.checked)}
-    />
-    Li e aceito os termos de uso.
-  </label>
-</div>
+        <div className="campo-termos">
+          <label className="label-termos">
+            <input
+              type="checkbox"
+              checked={aceitouTermos}
+              onChange={(e) => {
+                setAceitouTermos(e.target.checked);
+                if (erro) setErro("");
+              }}
+            />
+            <span>
+              Li e aceito os <strong>termos de uso</strong> e a política de
+              privacidade.
+            </span>
+          </label>
+        </div>
 
         <div className="campo-botao">
           <button type="submit" disabled={loading}>

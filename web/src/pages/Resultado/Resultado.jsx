@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 import "./Resultado.css";
 
@@ -8,14 +8,14 @@ import useAnalysisStore from "../../stores/analysisStore";
 import useAuthStore from "../../stores/authStore";
 import Loading from "../../components/Loading";
 
-import logoEscura from "../../assets/images/Logo-AnalisaAI-Escura.png";
-import logoSimbolo from "../../assets/images/Logo-AnalisaAI-Simbolo.png";
+import logo from "../../assets/images/Logo-AnalisaAI.png";
 
 export default function Resultado() {
   const { id } = useParams();
   const navigate = useNavigate();
 
   const [menuAberto, setMenuAberto] = useState(false);
+  const requisicaoFeita = useRef(null);
 
   const {
     analysis,
@@ -27,12 +27,19 @@ export default function Resultado() {
   const { user } = useAuthStore();
 
   useEffect(() => {
-    if (id && user?.id) {
-      fetchAnalysisById(id, user.id);
-    }
-  }, [id, user?.id, fetchAnalysisById]);
+    if (!id || !user?.id) return;
 
-  /* ==================== CARREGAMENTO ==================== */
+    const rawItem = Array.isArray(analysis) ? analysis[0] : analysis;
+    const jaCarregado =
+      rawItem && String(rawItem.search_request_id || rawItem.id) === String(id);
+
+    if (jaCarregado) return;
+
+    if (requisicaoFeita.current === id) return;
+    requisicaoFeita.current = id;
+
+    fetchAnalysisById(id, user.id);
+  }, [id, user?.id]);
 
   if (loading) {
     return (
@@ -41,8 +48,6 @@ export default function Resultado() {
       </div>
     );
   }
-
-  /* ==================== ERRO ==================== */
 
   if (error) {
     return (
@@ -59,12 +64,10 @@ export default function Resultado() {
     );
   }
 
-  /* ==================== SEM DADOS ==================== */
-
-  if (!analysis || analysis.length === 0) {
+  if (!analysis || (Array.isArray(analysis) && analysis.length === 0)) {
     return (
       <div className="resultado-page resultado-status">
-        <p>Carregando as informações da sua planta...</p>
+        <p>Nenhuma informação encontrada para esta planta.</p>
 
         <button
           type="button"
@@ -76,19 +79,25 @@ export default function Resultado() {
     );
   }
 
-  const planta = analysis[0];
+  const rawItem = Array.isArray(analysis) ? analysis[0] : analysis;
+  const planta = rawItem?.analysis_result || rawItem || {};
+
+  const commonName = planta.CommonName || planta.common_name || "Não informado";
+  const scientificName = planta.ScientificName || planta.scientific_name;
+  const description = planta.Description || planta.description || "Não informado";
+  const humanRisks = planta.HumanRisks || planta.human_risks || "Não informado";
+  const susceptibleSpecies = planta.SusceptibleAnimalSpecies || planta.susceptible_animal_species;
+  const commonSymptoms = planta.CommonSymptoms || planta.common_symptoms;
+  const recommendedActions = planta.RecommendedActions || planta.recommended_actions;
+  const imageUrl = rawItem?.image || planta.image;
 
   return (
     <div className="resultado-page">
-
-      {/* ==================== CABEÇALHO ==================== */}
-
-      <header className="resultado-header">
-        <div className="resultado-cabecalho">
-
+      <header className="cabecalho-padrao">
+        <div className="cabecalho-padrao-esquerda">
           <button
             type="button"
-            className="resultado-menu"
+            className="botao-menu-padrao"
             onClick={() => setMenuAberto(true)}
             aria-label="Abrir menu"
           >
@@ -98,29 +107,15 @@ export default function Resultado() {
           </button>
 
           <div
-            className="resultado-logo"
+            className="logo-padrao"
             onClick={() => navigate("/home")}
           >
-            <img
-              className="resultado-logo-simbolo"
-              src={logoSimbolo}
-              alt=""
-            />
-
-            <img
-              className="resultado-logo-texto"
-              src={logoEscura}
-              alt="AnalisaAI"
-            />
+            <img src={logo} alt="AnalisaAI" />
           </div>
-
         </div>
       </header>
 
-      {/* ==================== CONTEÚDO ==================== */}
-
       <main className="resultado-conteudo">
-
         <button
           type="button"
           className="resultado-voltar"
@@ -132,39 +127,31 @@ export default function Resultado() {
         <h1>Detalhes da Planta</h1>
 
         <div className="resultado-informacoes">
-
-          {/* FOTO + NOME CIENTÍFICO */}
-
           <div className="resultado-planta">
-
             <div className="resultado-foto">
               <img
-                src={planta.image}
-                alt={planta.common_name || "Planta analisada"}
+                src={imageUrl}
+                alt={commonName}
               />
             </div>
 
-            {planta.scientific_name && (
+            {scientificName && (
               <div className="resultado-cientifico">
                 <span>Nome científico</span>
-                <strong>{planta.scientific_name}</strong>
+                <strong>{scientificName}</strong>
               </div>
             )}
-
           </div>
 
-          {/* COLUNA 1 */}
-
           <div className="resultado-coluna">
-
             <div className="resultado-grupo">
               <span>Nome Popular</span>
-              <strong>{planta.common_name}</strong>
+              <strong>{commonName}</strong>
             </div>
 
             <div className="resultado-grupo">
               <span>Descrição</span>
-              <strong>{planta.description}</strong>
+              <strong>{description}</strong>
             </div>
 
             <div className="resultado-grupo">
@@ -173,26 +160,26 @@ export default function Resultado() {
               </span>
 
               <strong>
-                {planta.susceptible_animal_species?.join(", ")}
+                {Array.isArray(susceptibleSpecies)
+                  ? susceptibleSpecies.join(", ")
+                  : susceptibleSpecies || "Não informado"}
               </strong>
             </div>
-
           </div>
 
-          {/* COLUNA 2 */}
-
           <div className="resultado-coluna">
-
             <div className="resultado-grupo">
               <span>Riscos para os seres humanos</span>
-              <strong>{planta.human_risks}</strong>
+              <strong>{humanRisks}</strong>
             </div>
 
             <div className="resultado-grupo">
               <span>Sintomas comuns</span>
 
               <strong>
-                {planta.common_symptoms?.join(", ")}
+                {Array.isArray(commonSymptoms)
+                  ? commonSymptoms.join(", ")
+                  : commonSymptoms || "Não informado"}
               </strong>
             </div>
 
@@ -200,23 +187,19 @@ export default function Resultado() {
               <span>Ações recomendadas</span>
 
               <strong>
-                {planta.recommended_actions?.join(", ")}
+                {Array.isArray(recommendedActions)
+                  ? recommendedActions.join(", ")
+                  : recommendedActions || "Não informado"}
               </strong>
             </div>
-
           </div>
-
         </div>
-
       </main>
-
-      {/* ==================== MENU LATERAL ==================== */}
 
       <MenuLateral
         menuAberto={menuAberto}
         setMenuAberto={setMenuAberto}
       />
-
     </div>
   );
 }

@@ -1,20 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Home.css";
+import "./HeaderPadrao.css";
 
-// Importação dos componentes
 import MenuLateral from "../MenuLateral/MenuLateral";
 import Loading from "../../components/Loading";
 
-// Imagens do projeto
 import logo from "../../assets/images/Logo-AnalisaAI.png";
-import logoEscura from "../../assets/images/Logo-AnalisaAI-Escura.png";
-import logoSimbolo from "../../assets/images/Logo-AnalisaAI-Simbolo.png";
-import iconMenu from "../../assets/images/icon-menu.png";
-import iconPerson from "../../assets/images/icon-person.png";
 import iconSelecionar from "../../assets/images/icon-selecionar.png";
 
-// Utilitários e stores
 import { toBase64 } from "../../utils/converter";
 import useAnalysisStore from "../../stores/analysisStore";
 import useAuthStore from "../../stores/authStore";
@@ -24,73 +18,109 @@ export default function Home() {
   const [imagemPreview, setImagemPreview] = useState(null);
   const [carregando, setCarregando] = useState(false);
   const [imageBase64, setImageBase64] = useState("");
+  const [erroEnvio, setErroEnvio] = useState(null);
 
-  const { createAnalysis } = useAnalysisStore();
+  const {
+    createAnalysis,
+    searchRequestId,
+    error: storeError,
+  } = useAnalysisStore();
 
   const { user } = useAuthStore();
-
   const navigate = useNavigate();
 
+  const extensoesPermitidas = [
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/heic",
+    "image/webp",
+    "image/raw",
+  ];
+
   const aoSelecionarFoto = async (event) => {
-  const arquivo = event.target.files[0];
+    const arquivo = event.target.files[0];
 
-  // Permite selecionar novamente o mesmo arquivo
-  event.target.value = "";
+    if (arquivo) {
+      const tipoValido =
+        extensoesPermitidas.includes(arquivo.type) ||
+        /\.(jpg|jpeg|png|heic|webp|raw)$/i.test(arquivo.name);
 
-  if (!arquivo) return;
+      if (!tipoValido) {
+        setErroEnvio("O arquivo escolhido não é compatível.");
+        setImagemPreview(null);
+        setImageBase64("");
+        return;
+      }
 
-  if (!["image/jpeg", "image/png"].includes(arquivo.type)) {
-    alert("Selecione uma imagem JPG ou PNG.");
-    return;
-  }
+      if (imagemPreview) {
+        URL.revokeObjectURL(imagemPreview);
+      }
+      setErroEnvio(null);
+      const urlTemporaria = URL.createObjectURL(arquivo);
 
-  if (arquivo.size > 10 * 1024 * 1024) {
-    alert("A imagem deve ter no máximo 10 MB.");
-    return;
-  }
-
-  try {
-    const base64 = await toBase64(arquivo);
-    const urlTemporaria = URL.createObjectURL(arquivo);
-
-    setImageBase64(base64);
-    setImagemPreview(urlTemporaria);
-  } catch (error) {
-    console.error("Erro ao carregar imagem:", error);
-    alert("Não foi possível carregar a imagem.");
-  }
-};
+      setImagemPreview(urlTemporaria);
+      try {
+        const base64Converted = await toBase64(arquivo);
+        setImageBase64(base64Converted);
+      } catch (err) {
+        setErroEnvio("O arquivo escolhido não é compatível.");
+      }
+    }
+  };
 
   const escolherOutraFoto = () => {
+    if (imagemPreview) {
+      URL.revokeObjectURL(imagemPreview);
+    }
     setImagemPreview(null);
     setImageBase64("");
+    setErroEnvio(null);
   };
 
   const confirmarEnvio = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  try {
-    setCarregando(true);
-
-    const data = await createAnalysis(imageBase64, user.id);
-
-    setCarregando(false);
-
-    if (data && data.search_request_id) {
-      navigate(`/retorno/${data.search_request_id}`, {
-        state: {
-          imagemUrl: imagemPreview,
-        },
-      });
-    } else {
-      alert("A análise foi enviada, mas não recebemos o identificador do resultado.");
+    if (!user?.id) {
+      setErroEnvio("Sessão inválida. Faça login novamente.");
+      return;
     }
-  } catch (err) {
-    console.error("ERRO REAL AO ANALISAR:", err);
-    setCarregando(false);
-    alert("Erro ao analisar a planta");
+
+    if (!imageBase64) {
+      setErroEnvio("Por favor, selecione uma imagem válida.");
+      return;
+    }
+
+    try {
+      setCarregando(true);
+      setErroEnvio(null);
+
+      const result = await createAnalysis(imageBase64, user.id);
+      const activeSearchId = result?.search_request_id || searchRequestId;
+
+      setCarregando(false);
+
+      if (activeSearchId) {
+        navigate(`/retorno/${activeSearchId}`, {
+          state: {
+            imagemUrl: imagemPreview,
+          },
+        });
+      } else {
+        setErroEnvio("Não foi possível obter o código de confirmação da análise.");
+      }
+    } catch (err) {
+      console.error("ERRO REAL AO ANALISAR:", err);
+      setCarregando(false);
+      setErroEnvio(
+        storeError || "Ocorreu um erro ao analisar a planta. Tente novamente."
+      );
+    }
+  };
+
+  if (carregando) {
+    return <Loading mensagem="Analisando a sua imagem com IA..." />;
   }
-};
 
   return (
     <div
@@ -100,196 +130,160 @@ export default function Home() {
           : "home-page"
       }
     >
-      {/* ==================== CABEÇALHO ==================== */}
+      {/* ==================== CABEÇALHO PADRÃO ==================== */}
+      <header className="cabecalho-padrao">
+        <div className="cabecalho-padrao-esquerda">
+          <button
+            type="button"
+            className="botao-menu-padrao"
+            onClick={() => setMenuAberto(true)}
+            aria-label="Abrir menu"
+          >
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
 
-      <header>
-        <div
-          id="cabecalho"
-          className={
-            imagemPreview
-              ? "cabecalho-confirmacao"
-              : "cabecalho-home"
-          }
-        >
-          {imagemPreview ? (
-            <div className="cabecalho-esquerda">
-
-              <button
-                type="button"
-                className="botao-menu-confirmacao"
-                onClick={() => setMenuAberto(true)}
-                aria-label="Abrir menu"
-              >
-                <span></span>
-                <span></span>
-                <span></span>
-              </button>
-
-              <div className="logo-confirmacao">
-                <img
-                  className="logo-simbolo"
-                  src={logoSimbolo}
-                  alt=""
-                />
-
-                <img
-                  className="logo-texto"
-                  src={logoEscura}
-                  alt="AnalisaAI"
-                />
-              </div>
-
-            </div>
-          ) : (
-            <>
-              <img
-                id="icon-menu"
-                src={iconMenu}
-                alt="Menu"
-                onClick={() => setMenuAberto(true)}
-              />
-
-              <img
-                id="logo"
-                src={logo}
-                alt="AnalisaAI"
-              />
-
-              <img
-                id="icon-person"
-                src={iconPerson}
-                alt="Perfil"
-              />
-            </>
-          )}
+          <div
+            className="logo-padrao"
+            onClick={() => navigate("/home")}
+          >
+            <img src={logo} alt="AnalisaAI" />
+          </div>
         </div>
       </header>
 
       {/* ==================== MENU LATERAL ==================== */}
-
       <MenuLateral
         menuAberto={menuAberto}
         setMenuAberto={setMenuAberto}
       />
 
       {/* ==================== CONTEÚDO ==================== */}
-
       <main>
         <div id="corpo">
+          {erroEnvio ? (
+            <div className="container-erro-incompativel">
+              <div className="home-erro-banner-pilula">
+                <span className="home-erro-icon">!</span>
+                <p>{erroEnvio}</p>
+              </div>
 
-          {carregando ? (
-            <Loading />
+              <p className="subtexto-erro-incompativel">
+                Seu arquivo não possui um formato compatível ou pode estar corrompido.<br />
+                Tente novamente.
+              </p>
+
+              <div className="box-icone-arquivo-erro">
+                <div className="icone-documento-invalido">📄</div>
+              </div>
+
+              <p className="formatos-aceitos-texto">
+                Formatos aceitos: .jpg, .png, .heic, .webp e .raw
+              </p>
+
+              <div className="botoes-erro-incompativel">
+                <button
+                  type="button"
+                  className="btn-voltar-home"
+                  onClick={() => setErroEnvio(null)}
+                >
+                  Voltar
+                </button>
+
+                <label
+                  htmlFor="gerenciadorArquivosErro"
+                  className="btn-escolher-novamente"
+                  style={{ cursor: "pointer" }}
+                >
+                  Escolher novamente
+                </label>
+                <input
+                  type="file"
+                  id="gerenciadorArquivosErro"
+                  accept=".jpg, .jpeg, .png, .heic, .webp, .raw"
+                  style={{ display: "none" }}
+                  onChange={aoSelecionarFoto}
+                />
+              </div>
+            </div>
+          ) : !imagemPreview ? (
+            <div id="container-selecao">
+              <h2>
+                Envie uma foto agora mesmo e analise a sua planta
+              </h2>
+
+              <div id="selecionar">
+                <img
+                  id="photo-selection"
+                  src={iconSelecionar}
+                  alt="Selecionar"
+                />
+
+                <input
+                  type="file"
+                  id="gerenciadorArquivos"
+                  accept=".jpg, .jpeg, .png, .heic, .webp, .raw"
+                  style={{ display: "none" }}
+                  onChange={aoSelecionarFoto}
+                />
+
+                <label
+                  htmlFor="gerenciadorArquivos"
+                  id="arquivo"
+                  style={{ cursor: "pointer" }}
+                >
+                  Selecionar arquivo
+                </label>
+              </div>
+
+              <div id="recomendacao">
+                <div className="bloco">
+                  <li>Envie uma foto com iluminação clara</li>
+                  <li>Evite fotos tremidas ou fora de foco</li>
+                  <li>Garante que a foto não esteja borrada</li>
+                </div>
+
+                <div className="bloco">
+                  <li>Aproxime a câmera da folha ou da área afetada</li>
+                  <li>Mostre apenas uma planta por foto</li>
+                  <li>Evite outras plantas ou objetos misturados no fundo</li>
+                </div>
+              </div>
+            </div>
           ) : (
-            <>
-              {/* ==================== SELEÇÃO DA FOTO ==================== */}
+            <div id="container-confirmacao">
+              <h2>Confirme o envio da foto</h2>
 
-              {!imagemPreview ? (
-                <div id="container-selecao">
+              <div className="preview-box">
+                <img
+                  id="preview-foto"
+                  src={imagemPreview}
+                  alt="Foto selecionada"
+                />
+              </div>
 
-                  <h2>
-                    Envie uma foto agora mesmo e analise a sua planta
-                  </h2>
+              <div className="botoes-confirmacao">
+                <button
+                  type="button"
+                  id="btn-confirmar"
+                  onClick={confirmarEnvio}
+                  disabled={carregando}
+                >
+                  Enviar
+                </button>
 
-                  <div id="selecionar">
-
-                    <img
-                      id="photo-selection"
-                      src={iconSelecionar}
-                      alt="Selecionar"
-                    />
-
-                    <input
-                      type="file"
-                      id="gerenciadorArquivos"
-                      accept=".jpg, .jpeg, .png"
-                      style={{ display: "none" }}
-                      onChange={aoSelecionarFoto}
-                    />
-
-                    <label
-                      htmlFor="gerenciadorArquivos"
-                      id="arquivo"
-                      style={{ cursor: "pointer" }}
-                    >
-                      Selecionar arquivo
-                    </label>
-
-                  </div>
-
-                  <div id="recomendacao">
-
-                    <div className="bloco">
-                      <li>
-                        Envie uma foto com iluminação clara
-                      </li>
-
-                      <li>
-                        Evite fotos tremidas ou fora de foco
-                      </li>
-
-                      <li>
-                        Garante que a foto não esteja borrada
-                      </li>
-                    </div>
-
-                    <div className="bloco">
-                      <li>
-                        Aproxime a câmera da folha ou da área afetada
-                      </li>
-
-                      <li>
-                        Mostre apenas uma planta por foto
-                      </li>
-
-                      <li>
-                        Evite outras plantas ou objetos misturados no fundo
-                      </li>
-                    </div>
-
-                  </div>
-
-                </div>
-              ) : (
-                /* ==================== F04 - CONFIRMAÇÃO ==================== */
-
-                <div id="container-confirmacao">
-
-                  <h2>
-                    Confirme o envio da foto
-                  </h2>
-
-                  <div className="preview-box">
-                    <img
-                      id="preview-foto"
-                      src={imagemPreview}
-                      alt="Foto selecionada"
-                    />
-                  </div>
-
-                  <div className="botoes-confirmacao">
-
-                    <button
-                      id="btn-confirmar"
-                      onClick={confirmarEnvio}
-                    >
-                      Enviar
-                    </button>
-
-                    <button
-                      id="btn-alterar"
-                      onClick={escolherOutraFoto}
-                    >
-                      Escolher outra
-                    </button>
-
-                  </div>
-
-                </div>
-              )}
-
-            </>
+                <button
+                  type="button"
+                  id="btn-alterar"
+                  onClick={escolherOutraFoto}
+                  disabled={carregando}
+                >
+                  Escolher outra
+                </button>
+              </div>
+            </div>
           )}
-
         </div>
       </main>
     </div>

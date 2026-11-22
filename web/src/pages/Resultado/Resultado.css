@@ -30,16 +30,8 @@
 
     box-sizing: border-box;
 
-    background: linear-gradient(
-        180deg,
-        #ffffff 0%,
-        #f8fffc 25%,
-        #e8f8f1 50%,
-        #ccebdc 75%,
-        #a9d9c3 100%
-    );
-
-    color: #273b34;
+    background: linear-gradient(135deg, #021a12 0%, #004d32 100%);
+    color: #ffffff;
 
     font-family: 'Montserrat', sans-serif;
 
@@ -58,14 +50,7 @@
     width: 100vw;
     height: 100vh;
 
-    background: linear-gradient(
-        180deg,
-        #ffffff 0%,
-        #f8fffc 25%,
-        #e8f8f1 50%,
-        #ccebdc 75%,
-        #a9d9c3 100%
-    );
+    background: linear-gradient(135deg, #021a12 0%, #004d32 100%);
 
     z-index: -1;
     pointer-events: none;
@@ -93,7 +78,7 @@
 
     box-sizing: border-box;
 
-    border: 1px solid #8c9994;
+    border: 1px solid #ffffff;
     border-radius: 28px;
 
     background: rgba(255, 255, 255, 0.12);
@@ -129,7 +114,7 @@
     width: 18px;
     height: 2px;
 
-    background: #26332e;
+    background: #ffffff;
 
     border-radius: 5px;
 }
@@ -191,12 +176,12 @@
 
     margin: 0 0 22px;
 
-    border: 1px solid #16855e;
+    border: 1px solid #fdfdfd;
     border-radius: 22px;
 
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0);
 
-    color: #147a58;
+    color: #ffffff;
 
     font-family: 'Montserrat', sans-serif;
 
@@ -211,7 +196,7 @@
 }
 
 .resultado-voltar:hover {
-    background: rgba(22, 133, 94, 0.08);
+    background: rgba(255, 255, 255, 0.08);
 
     transform: translateX(-2px);
 }
@@ -226,7 +211,7 @@
     font-size: 24px;
     font-weight: 700;
 
-    color: #273b34;
+    color: #fdfdfd;
 }
 
 /* ==================== INFORMAÇÕES ==================== */
@@ -289,7 +274,7 @@
 
     text-align: center;
 
-    color: #273b34;
+    color: #ffffff;
 }
 
 .resultado-cientifico span {
@@ -305,7 +290,7 @@
 
     line-height: 1.25;
 
-    color: #273b34;
+    color: #ffffff;
 }
 
 /* ==================== COLUNAS ==================== */
@@ -323,7 +308,7 @@
     display: flex;
     flex-direction: column;
 
-    color: #273b34;
+    color: #ffffff;
 }
 
 .resultado-grupo span {
@@ -336,7 +321,7 @@
 
     line-height: 1.2;
 
-    color: #273b34;
+    color: #ffffff;
 }
 
 .resultado-grupo strong {
@@ -347,7 +332,7 @@
 
     line-height: 1.4;
 
-    color: #273b34;
+    color: #fdfdfd;
 }
 
 /* ==================== CARREGAMENTO / ERRO ==================== */
@@ -375,7 +360,7 @@
 
     font-size: 14px;
 
-    color: #273b34;
+    color: #ffffff;
 }
 
 .resultado-status button {

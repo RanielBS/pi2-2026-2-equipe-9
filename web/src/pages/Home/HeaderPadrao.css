@@ -1,0 +1,79 @@
+.cabecalho-padrao {
+  min-height: 52px;
+  margin: 20px 28px;
+  padding: 0 14px;
+  border: 1px solid #009963;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  box-sizing: border-box;
+}
+
+.cabecalho-padrao-esquerda {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.botao-menu-padrao {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.botao-menu-padrao span {
+  display: block;
+  width: 18px;
+  height: 2px;
+  background-color: #ffffff;
+  border-radius: 5px;
+}
+
+.logo-padrao {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  cursor: pointer;
+}
+
+.logo-padrao img {
+  height: 30px;
+  width: auto;
+  display: block;
+  object-fit: contain;
+}
+
+@media (max-width: 768px) {
+  .cabecalho-padrao {
+    margin: 14px 22px;
+    min-height: 48px;
+  }
+}
+
+@media (max-width: 480px) {
+  .cabecalho-padrao {
+    margin: 10px 14px;
+    min-height: 44px;
+    padding: 0 12px;
+    border-radius: 22px;
+  }
+}
+
+@media (max-width: 360px) {
+  .cabecalho-padrao {
+    margin: 8px 10px;
+    min-height: 42px;
+  }
+}

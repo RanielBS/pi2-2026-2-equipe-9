@@ -1,21 +1,27 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../../api/api";
 import useAuthStore from "../../stores/authStore";
-import "./EditarPerfil.css";
 import MenuLateral from "../MenuLateral/MenuLateral";
-import iconMenu from "../../assets/images/icon-menu.png";
-import logo from "../../assets/images/Logo-AnalisaAI.png";
-import iconPerson from "../../assets/images/icon-person.png";
+import Loading from "../../components/Loading";
+
+import logoClara from "../../assets/images/Logo-AnalisaAI.png";
 import { BsPencil, BsCheck } from "react-icons/bs";
 
+import "./EditarPerfil.css";
+
 export default function EditarPerfil() {
+  const navigate = useNavigate();
   const { user, setUser } = useAuthStore();
   const [estados, setEstados] = useState([]);
   const [cidades, setCidades] = useState([]);
   const [estadoSelecionado, setEstadoSelecionado] = useState("");
   const [cidadeSelecionada, setCidadeSelecionada] = useState("");
   const [menuAberto, setMenuAberto] = useState(false);
+
+  const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [mensagemFeedback, setMensagemFeedback] = useState({ tipo: "", texto: "" });
 
   const [dados, setDados] = useState({
     nome: "",
@@ -24,7 +30,6 @@ export default function EditarPerfil() {
     fazenda: "",
   });
 
-  // controla se cada campo está em modo edição (true) ou só leitura (false)
   const [editando, setEditando] = useState({
     nome: false,
     telefone: false,
@@ -38,27 +43,22 @@ export default function EditarPerfil() {
       .then((dados) => {
         const ordenados = dados.sort((a, b) => a.nome.localeCompare(b.nome));
         setEstados(ordenados);
-      });
+      })
+      .catch((err) => console.error("Erro ao carregar estados:", err));
   }, []);
 
   useEffect(() => {
-    if (!estadoSelecionado) return;
+    if (!estadoSelecionado) {
+      setCidades([]);
+      return;
+    }
     fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${estadoSelecionado}/municipios`)
       .then((res) => res.json())
       .then((dados) => {
         setCidades(dados);
-      });
+      })
+      .catch((err) => console.error("Erro ao carregar municípios:", err));
   }, [estadoSelecionado]);
-
-  // alterna entre editar/salvar de um campo específico
-  const toggleEditar = (campo) => {
-    setEditando((prev) => ({ ...prev, [campo]: !prev[campo] }));
-  };
-
-  // atualiza o valor de um campo enquanto digita
-  const handleChange = (campo, valor) => {
-    setDados((prev) => ({ ...prev, [campo]: valor }));
-  };
 
   useEffect(() => {
     if (!user) return;
@@ -74,6 +74,14 @@ export default function EditarPerfil() {
     setCidadeSelecionada(user.farm?.municipality || "");
   }, [user]);
 
+  const toggleEditar = (campo) => {
+    setEditando((prev) => ({ ...prev, [campo]: !prev[campo] }));
+  };
+
+  const handleChange = (campo, valor) => {
+    setDados((prev) => ({ ...prev, [campo]: valor }));
+  };
+
   const handleCancelar = () => {
     if (!user) return;
 
@@ -86,13 +94,24 @@ export default function EditarPerfil() {
 
     setEstadoSelecionado(user.farm?.state || "");
     setCidadeSelecionada(user.farm?.municipality || "");
+    setEditando({
+      nome: false,
+      telefone: false,
+      localidade: false,
+      fazenda: false,
+    });
+    setMensagemFeedback({ tipo: "", texto: "" });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setMensagemFeedback({ tipo: "", texto: "" });
 
     if (!user?.id) {
-      alert("Usuário não autenticado.");
+      setMensagemFeedback({
+        tipo: "erro",
+        texto: "Utilizador não autenticado.",
+      });
       return;
     }
 
@@ -107,7 +126,10 @@ export default function EditarPerfil() {
     if (dados.localidade !== farm.location) payload.location = dados.localidade;
 
     if (Object.keys(payload).length === 1) {
-      alert("Nenhuma alteração detectada.");
+      setMensagemFeedback({
+        tipo: "alerta",
+        texto: "Nenhuma alteração detetada para salvar.",
+      });
       return;
     }
 
@@ -115,12 +137,14 @@ export default function EditarPerfil() {
 
     try {
       const response = await api.patch("users/profile/", payload);
-
       const updatedUser = response?.data?.user;
 
       if (updatedUser) {
         setUser(updatedUser);
-        alert("Dados cadastrais atualizados com sucesso.");
+        setMensagemFeedback({
+          tipo: "sucesso",
+          texto: "Dados cadastrais atualizados com sucesso!",
+        });
         setDados({
           nome: updatedUser.name || "",
           telefone: updatedUser.phone || "",
@@ -129,174 +153,251 @@ export default function EditarPerfil() {
         });
         setEstadoSelecionado(updatedUser.farm?.state || "");
         setCidadeSelecionada(updatedUser.farm?.municipality || "");
+
+        setEditando({
+          nome: false,
+          telefone: false,
+          localidade: false,
+          fazenda: false,
+        });
       } else {
-        alert("Não foi possível atualizar os dados do perfil.");
+        setMensagemFeedback({
+          tipo: "erro",
+          texto: "Não foi possível atualizar os dados do perfil.",
+        });
       }
     } catch (err) {
       console.error(err);
       const msg = err?.response?.data?.message || err?.message || "Erro ao atualizar o perfil.";
-      alert(msg);
+      setMensagemFeedback({ tipo: "erro", texto: msg });
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <>
-      <header>
-        <div id="cabecalho">
-          <img id="icon-menu" src={iconMenu} alt="Menu" onClick={() => setMenuAberto(true)} />
-          <img id="logo" src={logo} alt="Logo" />
-          <img id="icon-person" src={iconPerson} alt="Perfil" />
+    <div className="home-page modo-confirmacao">
+      <header id="cabecalho" className="cabecalho-confirmacao">
+        <div className="cabecalho-esquerda">
+          <button
+            type="button"
+            className="botao-menu-confirmacao"
+            onClick={() => setMenuAberto(true)}
+            aria-label="Abrir menu"
+          >
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+
+          <div
+            className="logo-confirmacao"
+            onClick={() => navigate("/home")}
+            style={{ cursor: "pointer" }}
+          >
+            <img
+              className="logo-texto"
+              src={logoClara}
+              alt="AnalisaAI"
+              style={{ height: "30px", width: "auto" }}
+            />
+          </div>
         </div>
       </header>
 
-      <div className="editar-perfil-container">
+      <main className="editar-perfil-container">
         <h2>Meu Perfil - Dados Cadastrais</h2>
 
-        <section className="secao-dados">
-          <h3>Meus Dados</h3>
+        {loading ? (
+          <div className="perfil-loading">
+            <Loading />
+            <p>A carregar informações do perfil...</p>
+          </div>
+        ) : (
+          <section className="secao-dados">
+            {mensagemFeedback.texto && (
+              <div className={`banner-feedback feedback-${mensagemFeedback.tipo}`}>
+                <p>{mensagemFeedback.texto}</p>
+              </div>
+            )}
 
-          <form className="formulario-perfil">
-            <div className="colunas-2">
+            <form className="formulario-perfil" onSubmit={handleSubmit}>
+              <div className="colunas-2">
+                {/* COLUNA 1: DADOS PESSOAIS */}
+                <div className="coluna-grupo">
+                  <h3>Dados Pessoais</h3>
 
-              {/* NOME */}
-              <div className="campo-com-botao">
-                <label htmlFor="nome">Nome</label>
-                <div className="input-botao-wrapper">
-                  <input
-                    type="text"
-                    id="nome"
-                    placeholder="Digite seu nome"
-                    value={dados.nome}
-                    disabled={!editando.nome}
-                    onChange={(e) => handleChange("nome", e.target.value)}
-                  />
-                  <button
-                    type="button"
-                    className="btn-editar"
-                    onClick={() => toggleEditar("nome")}
-                  >
-                    {editando.nome ? <><BsCheck /> Salvar</> : <><BsPencil /> Editar</>}
-                  </button>
+                  <div className="campo-com-botao">
+                    <label htmlFor="nome">Nome</label>
+                    <div className="input-botao-wrapper">
+                      <input
+                        type="text"
+                        id="nome"
+                        placeholder="Digite seu nome"
+                        value={dados.nome}
+                        disabled={!editando.nome}
+                        onChange={(e) => handleChange("nome", e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        className="btn-editar"
+                        onClick={() => toggleEditar("nome")}
+                      >
+                        {editando.nome ? <><BsCheck /> Concluir</> : <><BsPencil /> Editar</>}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="campo-com-botao">
+                    <label htmlFor="telefone">Telefone</label>
+                    <div className="input-botao-wrapper">
+                      <input
+                        type="text"
+                        id="telefone"
+                        placeholder="(xx) xxxxx-xxxx"
+                        value={dados.telefone}
+                        disabled={!editando.telefone}
+                        onChange={(e) => handleChange("telefone", e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        className="btn-editar"
+                        onClick={() => toggleEditar("telefone")}
+                      >
+                        {editando.telefone ? <><BsCheck /> Concluir</> : <><BsPencil /> Editar</>}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="campo-com-botao">
+                    <label htmlFor="senha">Senha</label>
+                    <div className="input-botao-wrapper">
+                      <input
+                        type="password"
+                        id="senha"
+                        value="********"
+                        disabled
+                      />
+                      <button
+                        type="button"
+                        className="btn-editar"
+                        onClick={() => navigate("/alterar-senha")}
+                      >
+                        <BsPencil /> Alterar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* COLUNA 2: DADOS DA PROPRIEDADE */}
+                <div className="coluna-grupo">
+                  <h3>Dados da Propriedade</h3>
+
+                  <div className="campo-com-botao">
+                    <label htmlFor="fazenda">Nome da Fazenda</label>
+                    <div className="input-botao-wrapper">
+                      <input
+                        type="text"
+                        id="fazenda"
+                        placeholder="Nome da Fazenda"
+                        value={dados.fazenda}
+                        disabled={!editando.fazenda}
+                        onChange={(e) => handleChange("fazenda", e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        className="btn-editar"
+                        onClick={() => toggleEditar("fazenda")}
+                      >
+                        {editando.fazenda ? <><BsCheck /> Concluir</> : <><BsPencil /> Editar</>}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="linha-dupla-select">
+                    <div className="campo-sem-botao">
+                      <label htmlFor="estado">Estado</label>
+                      <select
+                        id="estado"
+                        value={estadoSelecionado}
+                        onChange={(e) => {
+                          setEstadoSelecionado(e.target.value);
+                          setCidadeSelecionada("");
+                        }}
+                      >
+                        <option value="">Selecione</option>
+                        {estados.map((estado) => (
+                          <option key={estado.id} value={estado.sigla}>
+                            {estado.nome}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="campo-sem-botao">
+                      <label htmlFor="cidade">Município/Cidade</label>
+                      <select
+                        id="cidade"
+                        value={cidadeSelecionada}
+                        disabled={!estadoSelecionado}
+                        onChange={(e) => setCidadeSelecionada(e.target.value)}
+                      >
+                        <option value="">Selecione</option>
+                        {cidades.map((cidade) => (
+                          <option key={cidade.id} value={cidade.nome}>
+                            {cidade.nome}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="campo-com-botao">
+                    <label htmlFor="localidade">Localidade</label>
+                    <div className="input-botao-wrapper">
+                      <input
+                        type="text"
+                        id="localidade"
+                        placeholder="Nome da Localidade"
+                        value={dados.localidade}
+                        disabled={!editando.localidade}
+                        onChange={(e) => handleChange("localidade", e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        className="btn-editar"
+                        onClick={() => toggleEditar("localidade")}
+                      >
+                        {editando.localidade ? <><BsCheck /> Concluir</> : <><BsPencil /> Editar</>}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* ESTADO */}
-              <div className="campo-sem-botao">
-                <label htmlFor="estado">Estado</label>
-                <select
-                  id="estado"
-                  value={estadoSelecionado}
-                  onChange={(e) => setEstadoSelecionado(e.target.value)}
+              <div className="botoes-finais">
+                <button
+                  type="button"
+                  className="btn-cancelar"
+                  onClick={handleCancelar}
+                  disabled={submitting}
                 >
-                  <option value="">Selecione um estado</option>
-                  {estados.map((estado) => (
-                    <option key={estado.id} value={estado.sigla}>
-                      {estado.nome}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* TELEFONE */}
-              <div className="campo-com-botao">
-                <label htmlFor="telefone">Telefone</label>
-                <div className="input-botao-wrapper">
-                  <input
-                    type="text"
-                    id="telefone"
-                    placeholder="(xx) xxxxx-xxxx"
-                    value={dados.telefone}
-                    disabled={!editando.telefone}
-                    onChange={(e) => handleChange("telefone", e.target.value)}
-                  />
-                  <button
-                    type="button"
-                    className="btn-editar"
-                    onClick={() => toggleEditar("telefone")}
-                  >
-                    {editando.telefone ? <><BsCheck /> Salvar</> : <><BsPencil /> Editar</>}
-                  </button>
-                </div>
-              </div>
-
-              {/* LOCALIDADE */}
-              <div className="campo-com-botao">
-                <label htmlFor="localidade">Localidade</label>
-                <div className="input-botao-wrapper">
-                  <input
-                    type="text"
-                    id="localidade"
-                    placeholder="Nome da Localidade"
-                    value={dados.localidade}
-                    disabled={!editando.localidade}
-                    onChange={(e) => handleChange("localidade", e.target.value)}
-                  />
-                  <button
-                    type="button"
-                    className="btn-editar"
-                    onClick={() => toggleEditar("localidade")}
-                  >
-                    {editando.localidade ? <><BsCheck /> Salvar</> : <><BsPencil /> Editar</>}
-                  </button>
-                </div>
-              </div>
-
-              {/* MUNICÍPIO/CIDADE */}
-              <div className="campo-sem-botao">
-                <label htmlFor="cidade">Município/Cidade</label>
-                <select
-                  id="cidade"
-                  value={cidadeSelecionada}
-                  onChange={(e) => setCidadeSelecionada(e.target.value)}
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="btn-salvar"
+                  disabled={submitting}
                 >
-                  <option value="">Selecione um município</option>
-                  {cidades.map((cidade) => (
-                    <option key={cidade.id} value={cidade.nome}>
-                      {cidade.nome}
-                    </option>
-                  ))}
-                </select>
+                  {submitting ? "Salvando..." : "Salvar Alterações"}
+                </button>
               </div>
-
-              {/* NOME DA FAZENDA */}
-              <div className="campo-com-botao">
-                <label htmlFor="fazenda">Nome da Fazenda</label>
-                <div className="input-botao-wrapper">
-                  <input
-                    type="text"
-                    id="fazenda"
-                    placeholder="Nome da Fazenda"
-                    value={dados.fazenda}
-                    disabled={!editando.fazenda}
-                    onChange={(e) => handleChange("fazenda", e.target.value)}
-                  />
-                  <button
-                    type="button"
-                    className="btn-editar"
-                    onClick={() => toggleEditar("fazenda")}
-                  >
-                    {editando.fazenda ? <><BsCheck /> Salvar</> : <><BsPencil /> Editar</>}
-                  </button>
-                </div>
-              </div>
-
-            </div>
-
-            <div className="botoes-finais">
-              <button type="button" className="btn-cancelar" onClick={handleCancelar} disabled={submitting}>
-                Cancelar
-              </button>
-              <button type="submit" className="btn-salvar" disabled={submitting} onClick={handleSubmit}>
-                {submitting ? "Salvando..." : "Salvar Alterações"}
-              </button>
-            </div>
-          </form>
-        </section>
-      </div>
+            </form>
+          </section>
+        )}
+      </main>
 
       <MenuLateral menuAberto={menuAberto} setMenuAberto={setMenuAberto} />
-    </>
+    </div>
   );
 }
