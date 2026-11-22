@@ -27,7 +27,27 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 MEDIA_URL = config("MEDIA_URL", default="/media/")
 MEDIA_ROOT = Path(config("MEDIA_ROOT", default=str(BASE_DIR / "media")))
 MEDIA_BASE_URL = config("MEDIA_BASE_URL", default="")
+# Supabase Storage
+USE_SUPABASE_STORAGE = config(
+    "USE_SUPABASE_STORAGE",
+    default=False,
+    cast=bool
+)
 
+SUPABASE_URL = config("SUPABASE_URL", default="")
+SUPABASE_SERVICE_ROLE_KEY = config(
+    "SUPABASE_SERVICE_ROLE_KEY",
+    default=""
+)
+SUPABASE_STORAGE_BUCKET = config(
+    "SUPABASE_STORAGE_BUCKET",
+    default="plant-images"
+)
+SUPABASE_SIGNED_URL_EXPIRES_IN = config(
+    "SUPABASE_SIGNED_URL_EXPIRES_IN",
+    default=3600,
+    cast=int
+)
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
@@ -186,6 +206,16 @@ STATIC_URL = "/static/"
 
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+# Configuração do armazenamento de arquivos
+if USE_SUPABASE_STORAGE:
+    STORAGES = {
+        "default": {
+            "BACKEND": "core.storage.supabase_storage.SupabaseStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
