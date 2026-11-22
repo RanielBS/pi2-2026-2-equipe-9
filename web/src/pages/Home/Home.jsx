@@ -25,26 +25,41 @@ export default function Home() {
   const [carregando, setCarregando] = useState(false);
   const [imageBase64, setImageBase64] = useState("");
 
-  const {
-    createAnalysis,
-    searchRequestId,
-    analysis,
-  } = useAnalysisStore();
+  const { createAnalysis } = useAnalysisStore();
 
   const { user } = useAuthStore();
 
   const navigate = useNavigate();
 
   const aoSelecionarFoto = async (event) => {
-    const arquivo = event.target.files[0];
+  const arquivo = event.target.files[0];
 
-    if (arquivo) {
-      const urlTemporaria = URL.createObjectURL(arquivo);
+  // Permite selecionar novamente o mesmo arquivo
+  event.target.value = "";
 
-      setImagemPreview(urlTemporaria);
-      setImageBase64(await toBase64(arquivo));
-    }
-  };
+  if (!arquivo) return;
+
+  if (!["image/jpeg", "image/png"].includes(arquivo.type)) {
+    alert("Selecione uma imagem JPG ou PNG.");
+    return;
+  }
+
+  if (arquivo.size > 10 * 1024 * 1024) {
+    alert("A imagem deve ter no máximo 10 MB.");
+    return;
+  }
+
+  try {
+    const base64 = await toBase64(arquivo);
+    const urlTemporaria = URL.createObjectURL(arquivo);
+
+    setImageBase64(base64);
+    setImagemPreview(urlTemporaria);
+  } catch (error) {
+    console.error("Erro ao carregar imagem:", error);
+    alert("Não foi possível carregar a imagem.");
+  }
+};
 
   const escolherOutraFoto = () => {
     setImagemPreview(null);
@@ -52,28 +67,30 @@ export default function Home() {
   };
 
   const confirmarEnvio = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    try {
-      setCarregando(true);
+  try {
+    setCarregando(true);
 
-      await createAnalysis(imageBase64, user.id);
+    const data = await createAnalysis(imageBase64, user.id);
 
-      setCarregando(false);
+    setCarregando(false);
 
-      if (analysis && searchRequestId) {
-        navigate(`/retorno/${searchRequestId}`, {
-          state: {
-            imagemUrl: imagemPreview,
-          },
-        });
-      }
-    } catch (err) {
-      console.error("ERRO REAL AO ANALISAR:", err);
-      setCarregando(false);
-      alert("Erro ao analisar a planta");
+    if (data && data.search_request_id) {
+      navigate(`/retorno/${data.search_request_id}`, {
+        state: {
+          imagemUrl: imagemPreview,
+        },
+      });
+    } else {
+      alert("A análise foi enviada, mas não recebemos o identificador do resultado.");
     }
-  };
+  } catch (err) {
+    console.error("ERRO REAL AO ANALISAR:", err);
+    setCarregando(false);
+    alert("Erro ao analisar a planta");
+  }
+};
 
   return (
     <div

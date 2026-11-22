@@ -1,9 +1,20 @@
+
 import { create } from "zustand";
 import api from "../api/api";
 
+const usuarioSalvo = () => {
+  try {
+    return JSON.parse(localStorage.getItem("user")) || null;
+  } catch {
+    return null;
+  }
+};
+
+const tokenSalvo = localStorage.getItem("token");
+
 const useAuthStore = create((set) => ({
-  user: null,
-  token: null,
+  user: usuarioSalvo(),
+  token: tokenSalvo,
   loading: false,
 
   login: async (telefone, password) => {
@@ -12,10 +23,13 @@ const useAuthStore = create((set) => ({
     try {
       const response = await api.post("users/login/", {
         phone: telefone,
-        password: password,
+        password,
       });
 
       const data = response.data;
+
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
 
       set({
         user: data.user,
@@ -23,8 +37,7 @@ const useAuthStore = create((set) => ({
         loading: false,
       });
 
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
+      return data;
     } catch (error) {
       set({ loading: false });
       throw error;
@@ -36,18 +49,11 @@ const useAuthStore = create((set) => ({
 
     try {
       const response = await api.post("users/", payload);
-
-      const data = response.data;
-
-      set({
-        user: data.user,
-        loading: false,
-      });
-
-      localStorage.setItem("user", JSON.stringify(data.user));
-    } catch (err) {
       set({ loading: false });
-      throw err;
+      return response.data;
+    } catch (error) {
+      set({ loading: false });
+      throw error;
     }
   },
 

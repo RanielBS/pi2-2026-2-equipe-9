@@ -1,39 +1,138 @@
+﻿
 import { Routes, Route } from "react-router-dom";
+import ProtectedRoute from "../components/ProtectedRoute";
 
 import Login from "../pages/Login/Login";
 import Home from "../pages/Home/Home";
 import EditarPerfil from "../pages/EditarPerfil/EditarPerfil";
-import Historico from "../pages/Historico/Historico"; 
-import Retorno from "../pages/Retorno/Retorno"; 
-import Resultado from "../pages/Resultado/Resultado"; 
+import AlterarSenha from "../pages/EditarPerfil/AlterarSenha/AlterarSenha";
+import Historico from "../pages/Historico/Historico";
+import Retorno from "../pages/Retorno/Retorno";
+import Resultado from "../pages/Resultado/Resultado";
+
 import Cadastrar from "../pages/Cadastro/Cadastrar";
 import Propriedade from "../pages/Cadastro/Propriedade";
+import OpcoesCad from "../pages/Cadastro/OpcoesCad";
+import CadastroTecnico from "../pages/Cadastro/CadastroTecnico";
+
 import Admin from "../pages/Admin/Admin";
-import CadastroAdmin from "../pages/Admin/CadastroAdmin/CadastroAdmin"
-import ListUsers from "../pages/Admin/ListUsers/ListUsers"
+import CadastroAdmin from "../pages/Admin/CadastroAdmin/CadastroAdmin";
+import ListUsers from "../pages/Admin/ListUsers/ListUsers";
+
+import TecnicoFilaTrabalho from "../pages/TecnicoFilaTrabalho/TecnicoFilaTrabalho";
+import TecnicoRevisaoDiagnostico from "../pages/TecnicoRevisaoDiagnostico/TecnicoRevisaoDiagnostico";
 
 export default function AppRoutes() {
   return (
     <Routes>
+      {/* Rotas públicas */}
       <Route path="/" element={<Login />} />
-      
-      <Route path="/home" element={<Home />} />
-      <Route path="/editar-perfil" element={<EditarPerfil />} />
-      <Route path="/historico" element={<Historico />} />
-      
-      {/* CORRIGIDO: Agora o caminho bate exatamente com o seu botão de Login e com a URL */}
-      <Route path="/cadastro" element={<Cadastrar />} />
+      <Route path="/cadastro" element={<OpcoesCad />} />
+      <Route path="/cadastroProdutor" element={<Cadastrar />} />
+      <Route path="/cadastroTecnico" element={<CadastroTecnico />} />
       <Route path="/propriedade" element={<Propriedade />} />
-      
-      {/* ROTA DINÂMICA: Ajustada para usar a página Retorno */}
-      <Route path="/retorno/:id" element={<Retorno />} />
-      
-      {/* ROTA DINÂMICA: Página de Resultado */}
-      <Route path="/resultado/:id" element={<Resultado />} />
 
-      <Route path="/admin" element={<Admin />} />
-      <Route path="/cadastroAdmin" element={<CadastroAdmin />} />
-      <Route path="/listUsers" element={<ListUsers />} />
+      {/* Rotas do produtor */}
+      <Route
+        path="/home"
+        element={
+          <ProtectedRoute allowedRoles={["produtor"]}>
+            <Home />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/editar-perfil"
+        element={
+          <ProtectedRoute allowedRoles={["produtor"]}>
+            <EditarPerfil />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/alterar-senha"
+        element={
+          <ProtectedRoute allowedRoles={["produtor"]}>
+            <AlterarSenha />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/historico"
+        element={
+          <ProtectedRoute allowedRoles={["produtor"]}>
+            <Historico />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/retorno/:id"
+        element={
+          <ProtectedRoute allowedRoles={["produtor"]}>
+            <Retorno />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/resultado/:id"
+        element={
+          <ProtectedRoute allowedRoles={["produtor"]}>
+            <Resultado />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Rotas do técnico */}
+      <Route
+        path="/fila-tecnico"
+        element={
+          <ProtectedRoute allowedRoles={["tecnico"]}>
+            <TecnicoFilaTrabalho />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/fila-trabalho"
+        element={
+          <ProtectedRoute allowedRoles={["tecnico"]}>
+            <TecnicoFilaTrabalho />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/revisao-diagnostico"
+        element={
+          <ProtectedRoute allowedRoles={["tecnico"]}>
+            <TecnicoRevisaoDiagnostico />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Rotas do administrador */}
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <Admin />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/cadastroAdmin"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <CadastroAdmin />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/listUsers"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <ListUsers />
+          </ProtectedRoute>
+        }
+      />
     </Routes>
   );
 }

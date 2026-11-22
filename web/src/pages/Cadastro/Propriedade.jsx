@@ -38,6 +38,7 @@ export default function Propriedade() {
   const [cidadeSelecionada, setCidadeSelecionada] = useState("");
   const location = useLocation();
   const { user, register, loading } = useAuthStore();
+  const [aceitouTermos, setAceitouTermos] = useState(false);
 
   useEffect(() => {
     fetch("https://servicodados.ibge.gov.br/api/v1/localidades/estados")
@@ -59,13 +60,18 @@ export default function Propriedade() {
 
   const finalizar = async (e) => {
     e.preventDefault();
-
+    if (!aceitouTermos) {
+    alert("Você precisa aceitar os termos de uso.");
+    return;
+}
     try {
       await register({
         name: location.state.nome,
         phone: location.state.telefone,
         password: location.state.senha,
         confirm_password: location.state.confirmarSenha,
+        accept_terms: aceitouTermos,
+        role: "produtor",
         farm:
           nomeFazenda && estadoSelecionado && cidadeSelecionada && localidade
             ? {
@@ -139,7 +145,16 @@ export default function Propriedade() {
           onChange={(e) => setLocalidade(e.target.value)}
         />
       </div>
-
+          <div className="campo">
+  <label>
+    <input
+      type="checkbox"
+      checked={aceitouTermos}
+      onChange={(e) => setAceitouTermos(e.target.checked)}
+    />
+    Li e aceito os termos de uso.
+  </label>
+</div>
       <div className="campo-botao">
         <button onClick={finalizar}>Cadastrar-se</button>
       </div>

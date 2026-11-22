@@ -19,22 +19,32 @@ export default function Login() {
     setCarregando(true);
     
     try {
-      await login(telefone, password);
-      
-      if (useAuthStore.getState().user) {
-        if (useAuthStore.getState().user.is_admin) {
-          navigate("/admin");
-        } else {
-          navigate("/home");
-        }
-      } else {
-        setCarregando(false);
-      }
-    } catch (err) {
-      setCarregando(false);
-      alert("Erro no login");
-    }
-  };
+     const numeros = telefone.replace(/\D/g, "");
+
+      const telefoneFormatado = numeros.startsWith("55")
+    ? `+${numeros}`
+    : `+55${numeros}`;
+
+  await login(telefoneFormatado, password);
+
+  if (useAuthStore.getState().user) {
+  const usuario = useAuthStore.getState().user;
+
+  if (usuario.is_admin) {
+    navigate("/admin");
+  } else if (usuario.role === "tecnico") {
+    navigate("/fila-tecnico");
+  } else {
+    navigate("/home");
+  }
+} else {
+  setCarregando(false);
+}
+} catch (err) {
+  setCarregando(false);
+  alert("Erro no login");
+}
+};
 
   function cadastrar() {
     navigate("/cadastro");
