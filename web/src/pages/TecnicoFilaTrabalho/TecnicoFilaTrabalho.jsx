@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import MenuLateral from "../MenuLateral/MenuLateral";
@@ -10,52 +11,23 @@ import "./TecnicoFilaTrabalho.css";
 
 export default function TecnicoFilaTrabalho() {
   const navigate = useNavigate();
-  const { fetchPendingAnalyses, pendingAnalyses, loading, error } = useAnalysisStore();
+
+  const {
+    fetchPendingAnalyses,
+    pendingAnalyses,
+    loading,
+    error,
+  } = useAnalysisStore();
 
   const [menuAberto, setMenuAberto] = useState(false);
   const [termoBusca, setTermoBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("TODOS");
 
   useEffect(() => {
-    if (typeof fetchPendingAnalyses === "function") {
-      fetchPendingAnalyses();
-    }
+    fetchPendingAnalyses();
   }, [fetchPendingAnalyses]);
 
-  const dadosExibicao = (pendingAnalyses && pendingAnalyses.length > 0)
-    ? pendingAnalyses
-    : [
-        {
-          id: 101,
-          produtorNome: "João da Silva",
-          fazendaNome: "Fazenda Santa Maria",
-          dataEnvio: "01/11/2026",
-          especieIa: "Solanum mauritianum (Fumo-brabo)",
-          confiancaIa: 88.5,
-          status: "Pendente",
-          imagemUrl: "https://via.placeholder.com/150",
-        },
-        {
-          id: 102,
-          produtorNome: "Maria Oliveira",
-          fazendaNome: "Sítio Boa Vista",
-          dataEnvio: "01/11/2026",
-          especieIa: "Ricinus communis (Mamona)",
-          confiancaIa: 94.2,
-          status: "Pendente",
-          imagemUrl: "https://via.placeholder.com/150",
-        },
-        {
-          id: 103,
-          produtorNome: "Carlos Eduardo",
-          fazendaNome: "Estância Verde",
-          dataEnvio: "31/10/2026",
-          especieIa: "Pteridium aquilinum (Samambaia-do-campo)",
-          confiancaIa: 79.0,
-          status: "Revisado",
-          imagemUrl: "https://via.placeholder.com/150",
-        },
-      ];
+  const dadosExibicao = pendingAnalyses || [];
 
   const dadosFiltrados = dadosExibicao.filter((item) => {
     const textoMatch =
@@ -71,8 +43,9 @@ export default function TecnicoFilaTrabalho() {
     return textoMatch && statusMatch;
   });
 
-  const totalPendentes = dadosExibicao.filter((i) => i.status === "Pendente").length;
-  const totalConcluidasHoje = dadosExibicao.filter((i) => i.status !== "Pendente").length;
+  const totalPendentes = dadosExibicao.filter(
+    (item) => item.status === "Pendente"
+  ).length;
 
   if (loading) {
     return <Loading mensagem="A carregar fila de trabalho técnica..." />;
@@ -80,7 +53,6 @@ export default function TecnicoFilaTrabalho() {
 
   return (
     <div className="tecnico-fila-page">
-      {/* Cabeçalho Ajustado */}
       <header className="tecnico-cabecalho">
         <img
           className="icon-menu-btn"
@@ -102,22 +74,26 @@ export default function TecnicoFilaTrabalho() {
         />
       </header>
 
-      <MenuLateral menuAberto={menuAberto} setMenuAberto={setMenuAberto} />
+      <MenuLateral
+        menuAberto={menuAberto}
+        setMenuAberto={setMenuAberto}
+      />
 
       <main className="fila-container">
         <div className="fila-header-titulo">
           <h2>Painel do Técnico Agrícola</h2>
-          <p>Validação de diagnósticos e emissão de pareceres especializados</p>
+          <p>
+            Validação de diagnósticos e emissão de pareceres especializados
+          </p>
         </div>
 
         {error && (
           <div className="home-erro-banner-pilula">
             <span className="home-erro-icon">!</span>
-            <p>Conexão com a API indisponível no momento. Exibindo dados de demonstração.</p>
+            <p>{error}</p>
           </div>
         )}
 
-        {/* Cards de Métricas */}
         <div className="metricas-grid">
           <div className="card-analisa card-metrica">
             <div className="card-metrica-info">
@@ -129,19 +105,18 @@ export default function TecnicoFilaTrabalho() {
           <div className="card-analisa card-metrica">
             <div className="card-metrica-info">
               <span className="card-metrica-label">Precisão Acumulada IA</span>
-              <span className="card-metrica-valor">92.4%</span>
+              <span className="card-metrica-valor">--</span>
             </div>
           </div>
 
           <div className="card-analisa card-metrica">
             <div className="card-metrica-info">
               <span className="card-metrica-label">Concluídas Hoje</span>
-              <span className="card-metrica-valor">{totalConcluidasHoje}</span>
+              <span className="card-metrica-valor">--</span>
             </div>
           </div>
         </div>
 
-        {/* Barra de Filtros */}
         <div className="card-analisa fila-filtros-bar">
           <input
             type="text"
@@ -159,6 +134,7 @@ export default function TecnicoFilaTrabalho() {
             >
               Todos
             </button>
+
             <button
               type="button"
               className={`btn-filtro ${filtroStatus === "PENDENTES" ? "ativo" : ""}`}
@@ -166,6 +142,7 @@ export default function TecnicoFilaTrabalho() {
             >
               Pendentes
             </button>
+
             <button
               type="button"
               className={`btn-filtro ${filtroStatus === "REVISADOS" ? "ativo" : ""}`}
@@ -176,7 +153,6 @@ export default function TecnicoFilaTrabalho() {
           </div>
         </div>
 
-        {/* Tabela da Fila */}
         <div className="card-analisa tabela-wrapper">
           <table className="tabela-fila">
             <thead>
@@ -190,33 +166,53 @@ export default function TecnicoFilaTrabalho() {
                 <th style={{ textAlign: "center" }}>Ação</th>
               </tr>
             </thead>
+
             <tbody>
               {dadosFiltrados.length === 0 ? (
                 <tr>
                   <td colSpan="7" style={{ textAlign: "center", padding: "24px" }}>
-                    Nenhuma análise encontrada.
+                    {error
+                      ? "Não foi possível carregar as análises."
+                      : "Nenhuma análise pendente encontrada."}
                   </td>
                 </tr>
               ) : (
                 dadosFiltrados.map((item) => (
                   <tr key={item.id}>
-                    <td>{item.dataEnvio}</td>
-                    <td style={{ fontWeight: 600 }}>{item.produtorNome}</td>
-                    <td>{item.fazendaNome}</td>
-                    <td>{item.especieIa}</td>
                     <td>
-                      <span className="badge-confianca">{item.confiancaIa}%</span>
+                      {item.dataEnvio
+                        ? new Date(item.dataEnvio).toLocaleDateString("pt-BR")
+                        : "--"}
                     </td>
+
+                    <td style={{ fontWeight: 600 }}>
+                      {item.produtorNome || "--"}
+                    </td>
+
+                    <td>{item.fazendaNome || "--"}</td>
+
+                    <td>{item.especieIa || "--"}</td>
+
                     <td>
-                      <span className={`status-pill ${item.status === "Pendente" ? "status-pendente" : "status-revisado"}`}>
-                        {item.status}
+                      <span className="badge-confianca">
+                        {item.confiancaIa ?? "--"}
+                        {item.confiancaIa != null ? "%" : ""}
                       </span>
                     </td>
+
+                    <td>
+                      <span className="status-pill status-pendente">
+                        {item.status || "Pendente"}
+                      </span>
+                    </td>
+
                     <td style={{ textAlign: "center" }}>
                       <button
                         type="button"
                         className="btn-acao-revisar"
-                        onClick={() => navigate("/revisao-diagnostico", { state: item })}
+                        onClick={() =>
+                          navigate("/revisao-diagnostico", { state: item })
+                        }
                       >
                         Revisar
                       </button>
