@@ -4,8 +4,6 @@ import MenuLateral from "../MenuLateral/MenuLateral";
 import Loading from "../../components/Loading";
 import useAnalysisStore from "../../stores/analysisStore";
 import logo from "../../assets/images/Logo-AnalisaAI.png";
-import iconMenu from "../../assets/images/icon-menu.png";
-import iconPerson from "../../assets/images/icon-person.png";
 import "./TecnicoFilaTrabalho.css";
 
 export default function TecnicoFilaTrabalho() {
@@ -80,26 +78,27 @@ export default function TecnicoFilaTrabalho() {
 
   return (
     <div className="tecnico-fila-page">
-      {/* Cabeçalho Ajustado */}
-      <header className="tecnico-cabecalho">
-        <img
-          className="icon-menu-btn"
-          src={iconMenu}
-          alt="Menu"
-          onClick={() => setMenuAberto(true)}
-        />
-        <img
-          className="logo-btn"
-          src={logo}
-          alt="AnalisaAI"
-          onClick={() => navigate("/home")}
-        />
-        <img
-          className="icon-person-btn"
-          src={iconPerson}
-          alt="Perfil"
-          onClick={() => navigate("/editar-perfil")}
-        />
+      {/* CABEÇALHO PADRÃO */}
+      <header className="cabecalho-padrao">
+        <div className="cabecalho-padrao-esquerda">
+          <button
+            type="button"
+            className="botao-menu-padrao"
+            onClick={() => setMenuAberto(true)}
+            aria-label="Abrir menu"
+          >
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+
+          <div
+            className="logo-padrao"
+            onClick={() => navigate("/home")}
+          >
+            <img src={logo} alt="AnalisaAI" />
+          </div>
+        </div>
       </header>
 
       <MenuLateral menuAberto={menuAberto} setMenuAberto={setMenuAberto} />
@@ -117,7 +116,6 @@ export default function TecnicoFilaTrabalho() {
           </div>
         )}
 
-        {/* Cards de Métricas */}
         <div className="metricas-grid">
           <div className="card-analisa card-metrica">
             <div className="card-metrica-info">
@@ -141,7 +139,6 @@ export default function TecnicoFilaTrabalho() {
           </div>
         </div>
 
-        {/* Barra de Filtros */}
         <div className="card-analisa fila-filtros-bar">
           <input
             type="text"
@@ -176,7 +173,6 @@ export default function TecnicoFilaTrabalho() {
           </div>
         </div>
 
-        {/* Tabela da Fila */}
         <div className="card-analisa tabela-wrapper">
           <table className="tabela-fila">
             <thead>

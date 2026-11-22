@@ -1,18 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Home.css";
+import "./HeaderPadrao.css";
 
-// Importação dos componentes
 import MenuLateral from "../MenuLateral/MenuLateral";
 import Loading from "../../components/Loading";
 
-// Imagem oficial da logo
 import logo from "../../assets/images/Logo-AnalisaAI.png";
-import iconMenu from "../../assets/images/icon-menu.png";
-import iconPerson from "../../assets/images/icon-person.png";
 import iconSelecionar from "../../assets/images/icon-selecionar.png";
 
-// Utilitários e stores
 import { toBase64 } from "../../utils/converter";
 import useAnalysisStore from "../../stores/analysisStore";
 import useAuthStore from "../../stores/authStore";
@@ -31,10 +27,8 @@ export default function Home() {
   } = useAnalysisStore();
 
   const { user } = useAuthStore();
-
   const navigate = useNavigate();
 
-  // Lista de formatos aceitos (Figma)
   const extensoesPermitidas = [
     "image/jpeg",
     "image/jpg",
@@ -48,7 +42,6 @@ export default function Home() {
     const arquivo = event.target.files[0];
 
     if (arquivo) {
-      // Valida se o formato do arquivo é suportado
       const tipoValido =
         extensoesPermitidas.includes(arquivo.type) ||
         /\.(jpg|jpeg|png|heic|webp|raw)$/i.test(arquivo.name);
@@ -103,7 +96,6 @@ export default function Home() {
       setErroEnvio(null);
 
       const result = await createAnalysis(imageBase64, user.id);
-
       const activeSearchId = result?.search_request_id || searchRequestId;
 
       setCarregando(false);
@@ -126,7 +118,6 @@ export default function Home() {
     }
   };
 
-  // ==================== TELA DE CARREGAMENTO EM FULLSCREEN ====================
   if (carregando) {
     return <Loading mensagem="Analisando a sua imagem com IA..." />;
   }
@@ -139,67 +130,26 @@ export default function Home() {
           : "home-page"
       }
     >
-      {/* ==================== CABEÇALHO ==================== */}
-      <header>
-        <div
-          id="cabecalho"
-          className={
-            imagemPreview
-              ? "cabecalho-confirmacao"
-              : "cabecalho-home"
-          }
-        >
-          {imagemPreview ? (
-            <div className="cabecalho-esquerda">
-              <button
-                type="button"
-                className="botao-menu-confirmacao"
-                onClick={() => setMenuAberto(true)}
-                aria-label="Abrir menu"
-              >
-                <span></span>
-                <span></span>
-                <span></span>
-              </button>
+      {/* ==================== CABEÇALHO PADRÃO ==================== */}
+      <header className="cabecalho-padrao">
+        <div className="cabecalho-padrao-esquerda">
+          <button
+            type="button"
+            className="botao-menu-padrao"
+            onClick={() => setMenuAberto(true)}
+            aria-label="Abrir menu"
+          >
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
 
-              <div
-                className="logo-confirmacao"
-                onClick={() => navigate("/home")}
-                style={{ cursor: "pointer" }}
-              >
-                <img
-                  className="logo-texto"
-                  src={logo}
-                  alt="AnalisaAI"
-                />
-              </div>
-            </div>
-          ) : (
-            <>
-              <img
-                id="icon-menu"
-                src={iconMenu}
-                alt="Menu"
-                onClick={() => setMenuAberto(true)}
-              />
-
-              <img
-                id="logo"
-                src={logo}
-                alt="AnalisaAI"
-                onClick={() => navigate("/home")}
-                style={{ cursor: "pointer" }}
-              />
-
-              <img
-                id="icon-person"
-                src={iconPerson}
-                alt="Perfil"
-                onClick={() => navigate("/editar-perfil")}
-                style={{ cursor: "pointer" }}
-              />
-            </>
-          )}
+          <div
+            className="logo-padrao"
+            onClick={() => navigate("/home")}
+          >
+            <img src={logo} alt="AnalisaAI" />
+          </div>
         </div>
       </header>
 
@@ -212,7 +162,6 @@ export default function Home() {
       {/* ==================== CONTEÚDO ==================== */}
       <main>
         <div id="corpo">
-          {/* ==================== MENSAGEM DE ERRO (FIGMA) ==================== */}
           {erroEnvio ? (
             <div className="container-erro-incompativel">
               <div className="home-erro-banner-pilula">
@@ -259,7 +208,6 @@ export default function Home() {
               </div>
             </div>
           ) : !imagemPreview ? (
-            /* ==================== SELEÇÃO DA FOTO ==================== */
             <div id="container-selecao">
               <h2>
                 Envie uma foto agora mesmo e analise a sua planta
@@ -304,7 +252,6 @@ export default function Home() {
               </div>
             </div>
           ) : (
-            /* ==================== CONFIRMAÇÃO ==================== */
             <div id="container-confirmacao">
               <h2>Confirme o envio da foto</h2>
 

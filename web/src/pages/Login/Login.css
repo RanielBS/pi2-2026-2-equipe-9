@@ -91,7 +91,7 @@ body {
 #title {
     display: flex;
     width: 100%;
-    margin-top: 20px;
+    margin: 20px;
 }
 
 .textos {
@@ -101,7 +101,7 @@ body {
     font-weight: 800;
     color: #ffffff;
     width: 100%;
-    margin-top: 20px;
+    margin: 20px 0;
 }
 
 /* INPUTS */
@@ -209,6 +209,7 @@ body {
     margin-top: 10px;
 }
 
+
 /* BOTÕES */
 
 #buttons {
@@ -267,6 +268,7 @@ body {
     cursor: pointer;
 
     transition: 0.3s;
+    margin: 0;
 }
 
 #esqSenha:hover {
@@ -387,7 +389,7 @@ body {
 .botao-olho {
   background: transparent;
   border: none;
-  padding: 0 12px;
+  padding: 0 4px;
   cursor: pointer;
   color: #009963;
   display: flex;
@@ -408,14 +410,22 @@ body {
   max-width: 400px;
 }
 
+.recall-forget{
+    margin:0;
+    justify-items: center;
+    align-items: center;
+}
+
 .recall-forget label {
   color: white;
   cursor: pointer;
+  margin-left: 15px;
 }
 
 .recall-forget input {
   margin-right: 5px;
   cursor: pointer;
+  margin-left: 0;
 }
 
 .recall-forget a {

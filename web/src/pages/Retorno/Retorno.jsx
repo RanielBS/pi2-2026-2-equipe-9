@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import MenuLateral from "../MenuLateral/MenuLateral";
 import Loading from "../../components/Loading";
@@ -12,6 +12,7 @@ import useAuthStore from "../../stores/authStore";
 
 export default function Retorno() {
   const [menuAberto, setMenuAberto] = useState(false);
+  const requisicaoFeita = useRef(null);
 
   const { id } = useParams();
   const navigate = useNavigate();
@@ -26,23 +27,29 @@ export default function Retorno() {
 
   const { user } = useAuthStore();
 
-  // Recarrega os dados da análise se o estado estiver vazio (ex: F5)
   useEffect(() => {
-    if ((!analysis || (Array.isArray(analysis) && analysis.length === 0)) && id && user?.id) {
-      fetchAnalysisById(id, user.id);
-    }
-  }, [id, user?.id, analysis, fetchAnalysisById]);
+    if (!id || !user?.id) return;
+
+    const rawItem = Array.isArray(analysis) ? analysis[0] : analysis;
+    const jaCarregado =
+      rawItem && String(rawItem.search_request_id || rawItem.id) === String(id);
+
+    if (jaCarregado) return;
+
+    if (requisicaoFeita.current === id) return;
+    requisicaoFeita.current = id;
+
+    fetchAnalysisById(id, user.id);
+  }, [id, user?.id]);
 
   const imagemEnviada = location.state?.imagemUrl || fotoTeste;
 
-  // Função utilitária para formatação de listas
   const formatList = (field) => {
     if (!field) return "Não informado";
     if (Array.isArray(field)) return field.length > 0 ? field.join(", ") : "Não informado";
     return field;
   };
 
-  /* ==================== 1. ESTADO DE CARREGAMENTO ==================== */
   if (loading) {
     return (
       <div className="retorno-page retorno-status">
@@ -52,7 +59,6 @@ export default function Retorno() {
     );
   }
 
-  /* ==================== 2. ESTADO DE ERRO ==================== */
   if (error) {
     return (
       <div className="retorno-page">
@@ -103,7 +109,6 @@ export default function Retorno() {
     );
   }
 
-  /* ==================== 3. ESTADO VAZIO / SEM DADOS ==================== */
   if (!analysis || (Array.isArray(analysis) && analysis.length === 0)) {
     return (
       <div className="retorno-page">
@@ -154,7 +159,6 @@ export default function Retorno() {
     );
   }
 
-  // Desestruturação segura considerando diferentes formatos de retorno
   const rawItem = Array.isArray(analysis) ? analysis[0] : analysis;
   const planta = rawItem?.analysis_result || rawItem || {};
 
@@ -165,7 +169,6 @@ export default function Retorno() {
   const commonSymptoms = planta.CommonSymptoms || planta.common_symptoms;
   const recommendedActions = planta.RecommendedActions || planta.recommended_actions;
 
-  /* ==================== 4. ESTADO DE SUCESSO ==================== */
   return (
     <div className="retorno-page">
       <header className="retorno-header">

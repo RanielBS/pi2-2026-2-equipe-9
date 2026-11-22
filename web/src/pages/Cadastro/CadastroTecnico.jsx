@@ -108,13 +108,21 @@ export default function CadastroTecnico() {
         </div>
 
         <div className="campo">
-          <label>Especialidade</label>
-          <input
-            type="text"
-            placeholder="Ex: Agronomia, Zootecnia, Veterinária"
+            <label>Especialidade</label>
+            <select
             value={especialidade}
             onChange={(e) => setEspecialidade(e.target.value)}
-          />
+        >
+            <option value="">Selecione uma especialidade</option>
+            <option value="Agronomia">Agronomia</option>
+            <option value="Zootecnia">Zootecnia</option>
+            <option value="Medicina Veterinária">Medicina Veterinária</option>
+            <option value="Engenharia Florestal">Engenharia Florestal</option>
+            <option value="Técnico em Agropecuária">Técnico em Agropecuária</option>
+            <option value="Botânica / Biologia">Botânica / Biologia</option>
+            <option value="Academico na area">Acadêmico na área</option>
+            <option value="Outra">Outra</option>
+        </select>
         </div>
 
         <div className="campo">
@@ -143,14 +151,19 @@ export default function CadastroTecnico() {
           />
         </div>
 
-<div className="campo">
-  <label>
+<div className="campo-termos">
+  <label className="label-termos">
     <input
       type="checkbox"
       checked={aceitouTermos}
-      onChange={(e) => setAceitouTermos(e.target.checked)}
+      onChange={(e) => {
+        setAceitouTermos(e.target.checked);
+        if (erro) setErro("");
+      }}
     />
-    Li e aceito os termos de uso.
+    <span>
+      Li e aceito os <strong>termos de uso</strong> e a política de privacidade.
+    </span>
   </label>
 </div>
 

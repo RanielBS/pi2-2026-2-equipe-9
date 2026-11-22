@@ -18,8 +18,8 @@ export default function EditarPerfil() {
   const [estadoSelecionado, setEstadoSelecionado] = useState("");
   const [cidadeSelecionada, setCidadeSelecionada] = useState("");
   const [menuAberto, setMenuAberto] = useState(false);
-  
-  const [loading, setLoading] = useState(true);
+
+  const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [mensagemFeedback, setMensagemFeedback] = useState({ tipo: "", texto: "" });
 
@@ -37,29 +37,6 @@ export default function EditarPerfil() {
     fazenda: false,
   });
 
-  // 1. Busca dados atualizados do perfil no Django
-  useEffect(() => {
-    async function carregarDadosPerfil() {
-      try {
-        setLoading(true);
-        const response = await api.get("users/profile/");
-        const userData = response.data.user || response.data;
-        setUser(userData);
-      } catch (err) {
-        console.error("Erro ao carregar dados do perfil:", err);
-        setMensagemFeedback({
-          tipo: "erro",
-          texto: "Não foi possível carregar as suas informações de perfil.",
-        });
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    carregarDadosPerfil();
-  }, []);
-
-  // 2. Busca Estados do IBGE
   useEffect(() => {
     fetch("https://servicodados.ibge.gov.br/api/v1/localidades/estados")
       .then((res) => res.json())
@@ -70,7 +47,6 @@ export default function EditarPerfil() {
       .catch((err) => console.error("Erro ao carregar estados:", err));
   }, []);
 
-  // 3. Busca Municípios conforme Estado
   useEffect(() => {
     if (!estadoSelecionado) {
       setCidades([]);
@@ -84,7 +60,6 @@ export default function EditarPerfil() {
       .catch((err) => console.error("Erro ao carregar municípios:", err));
   }, [estadoSelecionado]);
 
-  // 4. Sincroniza formulário com estado do usuário
   useEffect(() => {
     if (!user) return;
 
@@ -148,7 +123,7 @@ export default function EditarPerfil() {
     if (dados.fazenda !== farm.name) payload.farm_name = dados.fazenda;
     if (estadoSelecionado !== farm.state) payload.state = estadoSelecionado;
     if (cidadeSelecionada !== farm.municipality) payload.municipality = cidadeSelecionada;
-    if (dados.localidade !== farm.location) payload.location = dados.location;
+    if (dados.localidade !== farm.location) payload.location = dados.localidade;
 
     if (Object.keys(payload).length === 1) {
       setMensagemFeedback({
@@ -169,7 +144,7 @@ export default function EditarPerfil() {
         setMensagemFeedback({
           tipo: "sucesso",
           texto: "Dados cadastrais atualizados com sucesso!",
-        });        
+        });
         setDados({
           nome: updatedUser.name || "",
           telefone: updatedUser.phone || "",
@@ -178,7 +153,7 @@ export default function EditarPerfil() {
         });
         setEstadoSelecionado(updatedUser.farm?.state || "");
         setCidadeSelecionada(updatedUser.farm?.municipality || "");
-        
+
         setEditando({
           nome: false,
           telefone: false,
@@ -202,7 +177,6 @@ export default function EditarPerfil() {
 
   return (
     <div className="home-page modo-confirmacao">
-      {/* CABEÇALHO */}
       <header id="cabecalho" className="cabecalho-confirmacao">
         <div className="cabecalho-esquerda">
           <button
@@ -231,7 +205,6 @@ export default function EditarPerfil() {
         </div>
       </header>
 
-      {/* CONTEÚDO PRINCIPAL DO PERFIL */}
       <main className="editar-perfil-container">
         <h2>Meu Perfil - Dados Cadastrais</h2>
 
@@ -242,9 +215,6 @@ export default function EditarPerfil() {
           </div>
         ) : (
           <section className="secao-dados">
-            <h3>Meus Dados</h3>
-
-            {/* FEEDBACK DE SUCESSO/ERRO */}
             {mensagemFeedback.texto && (
               <div className={`banner-feedback feedback-${mensagemFeedback.tipo}`}>
                 <p>{mensagemFeedback.texto}</p>
@@ -253,149 +223,156 @@ export default function EditarPerfil() {
 
             <form className="formulario-perfil" onSubmit={handleSubmit}>
               <div className="colunas-2">
+                {/* COLUNA 1: DADOS PESSOAIS */}
+                <div className="coluna-grupo">
+                  <h3>Dados Pessoais</h3>
 
-                {/* NOME */}
-                <div className="campo-com-botao">
-                  <label htmlFor="nome">Nome</label>
-                  <div className="input-botao-wrapper">
-                    <input
-                      type="text"
-                      id="nome"
-                      placeholder="Digite seu nome"
-                      value={dados.nome}
-                      disabled={!editando.nome}
-                      onChange={(e) => handleChange("nome", e.target.value)}
-                    />
-                    <button
-                      type="button"
-                      className="btn-editar"
-                      onClick={() => toggleEditar("nome")}
-                    >
-                      {editando.nome ? <><BsCheck /> Concluir</> : <><BsPencil /> Editar</>}
-                    </button>
+                  <div className="campo-com-botao">
+                    <label htmlFor="nome">Nome</label>
+                    <div className="input-botao-wrapper">
+                      <input
+                        type="text"
+                        id="nome"
+                        placeholder="Digite seu nome"
+                        value={dados.nome}
+                        disabled={!editando.nome}
+                        onChange={(e) => handleChange("nome", e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        className="btn-editar"
+                        onClick={() => toggleEditar("nome")}
+                      >
+                        {editando.nome ? <><BsCheck /> Concluir</> : <><BsPencil /> Editar</>}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="campo-com-botao">
+                    <label htmlFor="telefone">Telefone</label>
+                    <div className="input-botao-wrapper">
+                      <input
+                        type="text"
+                        id="telefone"
+                        placeholder="(xx) xxxxx-xxxx"
+                        value={dados.telefone}
+                        disabled={!editando.telefone}
+                        onChange={(e) => handleChange("telefone", e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        className="btn-editar"
+                        onClick={() => toggleEditar("telefone")}
+                      >
+                        {editando.telefone ? <><BsCheck /> Concluir</> : <><BsPencil /> Editar</>}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="campo-com-botao">
+                    <label htmlFor="senha">Senha</label>
+                    <div className="input-botao-wrapper">
+                      <input
+                        type="password"
+                        id="senha"
+                        value="********"
+                        disabled
+                      />
+                      <button
+                        type="button"
+                        className="btn-editar"
+                        onClick={() => navigate("/alterar-senha")}
+                      >
+                        <BsPencil /> Alterar
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                {/* ESTADO */}
-                <div className="campo-sem-botao">
-                  <label htmlFor="estado">Estado</label>
-                  <select
-                    id="estado"
-                    value={estadoSelecionado}
-                    onChange={(e) => setEstadoSelecionado(e.target.value)}
-                  >
-                    <option value="">Selecione um estado</option>
-                    {estados.map((estado) => (
-                      <option key={estado.id} value={estado.sigla}>
-                        {estado.nome}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {/* COLUNA 2: DADOS DA PROPRIEDADE */}
+                <div className="coluna-grupo">
+                  <h3>Dados da Propriedade</h3>
 
-                {/* TELEFONE */}
-                <div className="campo-com-botao">
-                  <label htmlFor="telefone">Telefone</label>
-                  <div className="input-botao-wrapper">
-                    <input
-                      type="text"
-                      id="telefone"
-                      placeholder="(xx) xxxxx-xxxx"
-                      value={dados.telefone}
-                      disabled={!editando.telefone}
-                      onChange={(e) => handleChange("telefone", e.target.value)}
-                    />
-                    <button
-                      type="button"
-                      className="btn-editar"
-                      onClick={() => toggleEditar("telefone")}
-                    >
-                      {editando.telefone ? <><BsCheck /> Concluir</> : <><BsPencil /> Editar</>}
-                    </button>
+                  <div className="campo-com-botao">
+                    <label htmlFor="fazenda">Nome da Fazenda</label>
+                    <div className="input-botao-wrapper">
+                      <input
+                        type="text"
+                        id="fazenda"
+                        placeholder="Nome da Fazenda"
+                        value={dados.fazenda}
+                        disabled={!editando.fazenda}
+                        onChange={(e) => handleChange("fazenda", e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        className="btn-editar"
+                        onClick={() => toggleEditar("fazenda")}
+                      >
+                        {editando.fazenda ? <><BsCheck /> Concluir</> : <><BsPencil /> Editar</>}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="linha-dupla-select">
+                    <div className="campo-sem-botao">
+                      <label htmlFor="estado">Estado</label>
+                      <select
+                        id="estado"
+                        value={estadoSelecionado}
+                        onChange={(e) => {
+                          setEstadoSelecionado(e.target.value);
+                          setCidadeSelecionada("");
+                        }}
+                      >
+                        <option value="">Selecione</option>
+                        {estados.map((estado) => (
+                          <option key={estado.id} value={estado.sigla}>
+                            {estado.nome}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="campo-sem-botao">
+                      <label htmlFor="cidade">Município/Cidade</label>
+                      <select
+                        id="cidade"
+                        value={cidadeSelecionada}
+                        disabled={!estadoSelecionado}
+                        onChange={(e) => setCidadeSelecionada(e.target.value)}
+                      >
+                        <option value="">Selecione</option>
+                        {cidades.map((cidade) => (
+                          <option key={cidade.id} value={cidade.nome}>
+                            {cidade.nome}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="campo-com-botao">
+                    <label htmlFor="localidade">Localidade</label>
+                    <div className="input-botao-wrapper">
+                      <input
+                        type="text"
+                        id="localidade"
+                        placeholder="Nome da Localidade"
+                        value={dados.localidade}
+                        disabled={!editando.localidade}
+                        onChange={(e) => handleChange("localidade", e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        className="btn-editar"
+                        onClick={() => toggleEditar("localidade")}
+                      >
+                        {editando.localidade ? <><BsCheck /> Concluir</> : <><BsPencil /> Editar</>}
+                      </button>
+                    </div>
                   </div>
                 </div>
-
-                {/* LOCALIDADE */}
-                <div className="campo-com-botao">
-                  <label htmlFor="localidade">Localidade</label>
-                  <div className="input-botao-wrapper">
-                    <input
-                      type="text"
-                      id="localidade"
-                      placeholder="Nome da Localidade"
-                      value={dados.localidade}
-                      disabled={!editando.localidade}
-                      onChange={(e) => handleChange("localidade", e.target.value)}
-                    />
-                    <button
-                      type="button"
-                      className="btn-editar"
-                      onClick={() => toggleEditar("localidade")}
-                    >
-                      {editando.localidade ? <><BsCheck /> Concluir</> : <><BsPencil /> Editar</>}
-                    </button>
-                  </div>
-                </div>
-
-                {/* ALTERAR SENHA (ADICIONADO CONFORME O FIGMA) */}
-                <div className="campo-com-botao">
-                  <label htmlFor="senha">Alterar senha</label>
-                  <div className="input-botao-wrapper">
-                    <input
-                      type="password"
-                      id="senha"
-                      value="********"
-                      disabled
-                    />
-                    <button
-                      type="button"
-                      className="btn-editar"
-                      onClick={() => navigate("/alterar-senha")}
-                    >
-                      <BsPencil /> Editar
-                    </button>
-                  </div>
-                </div>
-
-                {/* MUNICÍPIO */}
-                <div className="campo-sem-botao">
-                  <label htmlFor="cidade">Município/Cidade</label>
-                  <select
-                    id="cidade"
-                    value={cidadeSelecionada}
-                    onChange={(e) => setCidadeSelecionada(e.target.value)}
-                  >
-                    <option value="">Selecione um município</option>
-                    {cidades.map((cidade) => (
-                      <option key={cidade.id} value={cidade.nome}>
-                        {cidade.nome}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* FAZENDA */}
-                <div className="campo-com-botao">
-                  <label htmlFor="fazenda">Nome da Fazenda</label>
-                  <div className="input-botao-wrapper">
-                    <input
-                      type="text"
-                      id="fazenda"
-                      placeholder="Nome da Fazenda"
-                      value={dados.fazenda}
-                      disabled={!editando.fazenda}
-                      onChange={(e) => handleChange("fazenda", e.target.value)}
-                    />
-                    <button
-                      type="button"
-                      className="btn-editar"
-                      onClick={() => toggleEditar("fazenda")}
-                    >
-                      {editando.fazenda ? <><BsCheck /> Concluir</> : <><BsPencil /> Editar</>}
-                    </button>
-                  </div>
-                </div>
-
               </div>
 
               <div className="botoes-finais">

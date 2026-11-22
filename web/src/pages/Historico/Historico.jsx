@@ -8,14 +8,12 @@ import Loading from "../../components/Loading";
 import useAnalysisStore from "../../stores/analysisStore";
 import useAuthStore from "../../stores/authStore";
 
-import logoEscura from "../../assets/images/Logo-AnalisaAI-Escura.png";
-import logoSimbolo from "../../assets/images/Logo-AnalisaAI-Simbolo.png";
+import logoClara from "../../assets/images/Logo-AnalisaAI.png";
 
 import "./Historico.css";
 
 export default function Historico() {
   const [menuAberto, setMenuAberto] = useState(false);
-
   const navigate = useNavigate();
 
   const {
@@ -35,15 +33,12 @@ export default function Historico() {
 
   return (
     <div className="historico-page">
-
-      {/* CABEÇALHO */}
-
-      <header className="historico-header">
-        <div className="historico-cabecalho">
-
+      {/* CABEÇALHO PADRÃO */}
+      <header className="cabecalho-padrao">
+        <div className="cabecalho-padrao-esquerda">
           <button
             type="button"
-            className="historico-menu"
+            className="botao-menu-padrao"
             onClick={() => setMenuAberto(true)}
             aria-label="Abrir menu"
           >
@@ -53,32 +48,17 @@ export default function Historico() {
           </button>
 
           <div
-            className="historico-logo"
+            className="logo-padrao"
             onClick={() => navigate("/home")}
           >
-            <img
-              className="historico-logo-simbolo"
-              src={logoSimbolo}
-              alt=""
-            />
-
-            <img
-              className="historico-logo-texto"
-              src={logoEscura}
-              alt="AnalisaAI"
-            />
+            <img src={logoClara} alt="AnalisaAI" />
           </div>
-
         </div>
       </header>
 
       {/* CONTEÚDO */}
-
       <main className="historico-conteudo">
-
         <h1>Histórico</h1>
-
-        {/* CARREGAMENTO */}
 
         {loading && (
           <div className="historico-status">
@@ -86,15 +66,11 @@ export default function Historico() {
           </div>
         )}
 
-        {/* ERRO */}
-
         {!loading && error && (
           <div className="historico-status historico-erro">
             <p>Erro ao carregar histórico: {error}</p>
           </div>
         )}
-
-        {/* HISTÓRICO VAZIO */}
 
         {!loading && !error && analysisHistory.length === 0 && (
           <div className="historico-status">
@@ -102,11 +78,8 @@ export default function Historico() {
           </div>
         )}
 
-        {/* LISTAGEM */}
-
         {!loading && !error && analysisHistory.length > 0 && (
           <div className="historico-listagem">
-
             {analysisHistory.map((planta) => (
               <CardPlanta
                 key={planta.search_request_id}
@@ -116,17 +89,14 @@ export default function Historico() {
                 rotaLink={`/resultado/${planta.search_request_id}`}
               />
             ))}
-
           </div>
         )}
-
       </main>
 
       <MenuLateral
         menuAberto={menuAberto}
         setMenuAberto={setMenuAberto}
       />
-
     </div>
   );
 }
