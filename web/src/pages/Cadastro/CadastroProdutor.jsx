@@ -14,6 +14,7 @@ export default function CadastroProdutor() {
   const [confirmarSenha, setConfirmarSenha] = useState("");
   const [erro, setErro] = useState("");
   const [carregandoLocal, setCarregandoLocal] = useState(false);
+  const [aceitouTermos, setAceitouTermos] = useState(false);
 
   const [nomeFazenda, setNomeFazenda] = useState("");
   const [localidade, setLocalidade] = useState("");
@@ -354,12 +355,29 @@ export default function CadastroProdutor() {
           />
         </div>
 
+            <div className="campo-termos">
+          <label className="label-termos">
+            <input
+              type="checkbox"
+              checked={aceitouTermos}
+              onChange={(e) => setAceitouTermos(e.target.checked)}
+            />
+
+            <span>
+              Li e aceito os <strong>termos de uso</strong> e a política de
+              privacidade.
+            </span>
+          </label>
+        </div>
+
         <div className="campo-botao">
           <button type="submit" disabled={isProcessing}>
             {isProcessing ? "Cadastrando..." : "Cadastrar-se"}
           </button>
         </div>
       </form>
+
+      
     </div>
   );
 }
