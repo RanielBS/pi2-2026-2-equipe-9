@@ -5,19 +5,15 @@ from rest_framework import serializers
 from users.dtos.farm_dto import FarmDTO
 from users.dtos.register_user_dto import RegisterUserDTO
 from users.models.user_model import UserRole
+from users.models.technician_profile_model import TechnicianType
 from users.serializers.register_farm_serializer import RegisterFarmSerializer
 
 
 class RegisterUserSerializer(serializers.Serializer):
 
-    name = serializers.CharField(
-        max_length=150,
-        required=True
-    )
+    name = serializers.CharField(max_length=150, required=True)
 
-    accept_terms = serializers.BooleanField(
-        required=True
-    )
+    accept_terms = serializers.BooleanField(required=True)
 
     phone = PhoneNumberField(
         region="BR",
@@ -46,13 +42,40 @@ class RegisterUserSerializer(serializers.Serializer):
     professional_register = serializers.CharField(
         max_length=100,
         required=False,
-        allow_blank=False
+        allow_blank=True
     )
 
     specialty = serializers.CharField(
         max_length=150,
         required=False,
-        allow_blank=False
+        allow_blank=True
+    )
+
+    technician_type = serializers.ChoiceField(
+        choices=TechnicianType.choices,
+        required=False
+    )
+
+    is_professor = serializers.BooleanField(
+        required=False,
+        default=False
+    )
+
+    institution = serializers.CharField(
+        max_length=200,
+        required=False,
+        allow_blank=True
+    )
+
+    course = serializers.CharField(
+        max_length=150,
+        required=False,
+        allow_blank=True
+    )
+
+    qualification_description = serializers.CharField(
+        required=False,
+        allow_blank=True
     )
 
     farm = RegisterFarmSerializer(
@@ -75,22 +98,61 @@ class RegisterUserSerializer(serializers.Serializer):
                 "confirm_password": "As senhas não coincidem."
             })
 
-        role = data["role"]
+        if data["role"] == UserRole.TECHNICIAN:
 
-        if role == UserRole.TECHNICIAN:
-            if not data.get("professional_register"):
+            technician_type = data.get("technician_type")
+            is_professor = data.get("is_professor", False)
+
+            if not technician_type:
                 raise serializers.ValidationError({
-                    "professional_register": (
-                        "O registro profissional é obrigatório para técnicos."
+                    "technician_type": (
+                        "Informe se o técnico é estudante ou profissional."
                     )
                 })
 
-            if not data.get("specialty"):
+            if is_professor and technician_type != TechnicianType.PROFESSIONAL:
                 raise serializers.ValidationError({
-                    "specialty": (
-                        "A especialidade é obrigatória para técnicos."
+                    "is_professor": (
+                        "Professores devem ser classificados como profissionais."
                     )
                 })
+
+            if technician_type == TechnicianType.STUDENT:
+
+                if not data.get("institution"):
+                    raise serializers.ValidationError({
+                        "institution": (
+                            "A instituição de ensino é obrigatória para estudantes."
+                        )
+                    })
+
+                if not data.get("course"):
+                    raise serializers.ValidationError({
+                        "course": "O curso é obrigatório para estudantes."
+                    })
+
+            if technician_type == TechnicianType.PROFESSIONAL:
+
+                if not data.get("specialty"):
+                    raise serializers.ValidationError({
+                        "specialty": (
+                            "A especialidade é obrigatória para profissionais."
+                        )
+                    })
+
+                if not data.get("qualification_description"):
+                    raise serializers.ValidationError({
+                        "qualification_description": (
+                            "Informe sua formação ou qualificação profissional."
+                        )
+                    })
+
+                if is_professor and not data.get("institution"):
+                    raise serializers.ValidationError({
+                        "institution": (
+                            "A instituição de ensino é obrigatória para professores."
+                        )
+                    })
 
         return data
 
@@ -115,6 +177,15 @@ class RegisterUserSerializer(serializers.Serializer):
             password=data["password"],
             role=data["role"],
             farm=farm_dto,
-            professional_register=data.get("professional_register"),
-            specialty=data.get("specialty")
+            professional_register=(
+                data.get("professional_register") or None
+            ),
+            specialty=data.get("specialty") or None,
+            technician_type=data.get("technician_type"),
+            is_professor=data.get("is_professor", False),
+            institution=data.get("institution") or None,
+            course=data.get("course") or None,
+            qualification_description=(
+                data.get("qualification_description") or None
+            )
         )

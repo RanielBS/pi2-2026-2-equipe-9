@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import MenuLateral from "../MenuLateral/MenuLateral";
@@ -8,72 +9,44 @@ import "./TecnicoFilaTrabalho.css";
 
 export default function TecnicoFilaTrabalho() {
   const navigate = useNavigate();
-  const { fetchPendingAnalyses, pendingAnalyses, loading, error } = useAnalysisStore();
+
+  const {
+    fetchPendingAnalyses,
+    pendingAnalyses,
+    loading,
+    error,
+  } = useAnalysisStore();
 
   const [menuAberto, setMenuAberto] = useState(false);
   const [termoBusca, setTermoBusca] = useState("");
-  const [filtroStatus, setFiltroStatus] = useState("TODOS");
 
   useEffect(() => {
     if (typeof fetchPendingAnalyses === "function") {
-      fetchPendingAnalyses();
+      fetchPendingAnalyses().catch(() => {});
     }
   }, [fetchPendingAnalyses]);
 
-  const dadosExibicao = (pendingAnalyses && pendingAnalyses.length > 0)
+  // Exibe somente dados reais retornados pela API.
+  const dadosExibicao = Array.isArray(pendingAnalyses)
     ? pendingAnalyses
-    : [
-        {
-          id: 101,
-          produtorNome: "João da Silva",
-          fazendaNome: "Fazenda Santa Maria",
-          dataEnvio: "01/11/2026",
-          especieIa: "Solanum mauritianum (Fumo-brabo)",
-          confiancaIa: 88.5,
-          status: "Pendente",
-          imagemUrl: "https://via.placeholder.com/150",
-        },
-        {
-          id: 102,
-          produtorNome: "Maria Oliveira",
-          fazendaNome: "Sítio Boa Vista",
-          dataEnvio: "01/11/2026",
-          especieIa: "Ricinus communis (Mamona)",
-          confiancaIa: 94.2,
-          status: "Pendente",
-          imagemUrl: "https://via.placeholder.com/150",
-        },
-        {
-          id: 103,
-          produtorNome: "Carlos Eduardo",
-          fazendaNome: "Estância Verde",
-          dataEnvio: "31/10/2026",
-          especieIa: "Pteridium aquilinum (Samambaia-do-campo)",
-          confiancaIa: 79.0,
-          status: "Revisado",
-          imagemUrl: "https://via.placeholder.com/150",
-        },
-      ];
+    : [];
 
+  // Filtra as análises pelo nome do produtor, fazenda ou espécie.
   const dadosFiltrados = dadosExibicao.filter((item) => {
+    const termo = termoBusca.toLowerCase();
+
     const textoMatch =
-      (item.produtorNome || "").toLowerCase().includes(termoBusca.toLowerCase()) ||
-      (item.fazendaNome || "").toLowerCase().includes(termoBusca.toLowerCase()) ||
-      (item.especieIa || "").toLowerCase().includes(termoBusca.toLowerCase());
+      (item.produtorNome || "").toLowerCase().includes(termo) ||
+      (item.fazendaNome || "").toLowerCase().includes(termo) ||
+      (item.especieIa || "").toLowerCase().includes(termo);
 
-    const statusMatch =
-      filtroStatus === "TODOS" ||
-      (filtroStatus === "PENDENTES" && item.status === "Pendente") ||
-      (filtroStatus === "REVISADOS" && item.status !== "Pendente");
-
-    return textoMatch && statusMatch;
+    return textoMatch;
   });
 
-  const totalPendentes = dadosExibicao.filter((i) => i.status === "Pendente").length;
-  const totalConcluidasHoje = dadosExibicao.filter((i) => i.status !== "Pendente").length;
+  const totalPendentes = dadosExibicao.length;
 
   if (loading) {
-    return <Loading mensagem="A carregar fila de trabalho técnica..." />;
+    return <Loading mensagem="Carregando fila de trabalho técnica..." />;
   }
 
   return (
@@ -101,44 +74,60 @@ export default function TecnicoFilaTrabalho() {
         </div>
       </header>
 
-      <MenuLateral menuAberto={menuAberto} setMenuAberto={setMenuAberto} />
+      <MenuLateral
+        menuAberto={menuAberto}
+        setMenuAberto={setMenuAberto}
+      />
 
       <main className="fila-container">
         <div className="fila-header-titulo">
           <h2>Painel do Técnico Agrícola</h2>
-          <p>Validação de diagnósticos e emissão de pareceres especializados</p>
+          <p>
+            Validação de diagnósticos e emissão de pareceres especializados
+          </p>
         </div>
 
+        {/* MENSAGEM DE ERRO */}
         {error && (
           <div className="home-erro-banner-pilula">
             <span className="home-erro-icon">!</span>
-            <p>Conexão com a API indisponível no momento. Exibindo dados de demonstração.</p>
+            <p>{error}</p>
           </div>
         )}
 
+        {/* MÉTRICAS */}
         <div className="metricas-grid">
           <div className="card-analisa card-metrica">
             <div className="card-metrica-info">
-              <span className="card-metrica-label">Pendentes na Fila</span>
-              <span className="card-metrica-valor">{totalPendentes}</span>
+              <span className="card-metrica-label">
+                Pendentes na Fila
+              </span>
+              <span className="card-metrica-valor">
+                {totalPendentes}
+              </span>
             </div>
           </div>
 
           <div className="card-analisa card-metrica">
             <div className="card-metrica-info">
-              <span className="card-metrica-label">Precisão Acumulada IA</span>
-              <span className="card-metrica-valor">92.4%</span>
+              <span className="card-metrica-label">
+                Precisão Acumulada IA
+              </span>
+              <span className="card-metrica-valor">—</span>
             </div>
           </div>
 
           <div className="card-analisa card-metrica">
             <div className="card-metrica-info">
-              <span className="card-metrica-label">Concluídas Hoje</span>
-              <span className="card-metrica-valor">{totalConcluidasHoje}</span>
+              <span className="card-metrica-label">
+                Concluídas Hoje
+              </span>
+              <span className="card-metrica-valor">—</span>
             </div>
           </div>
         </div>
 
+        {/* BUSCA */}
         <div className="card-analisa fila-filtros-bar">
           <input
             type="text"
@@ -147,32 +136,9 @@ export default function TecnicoFilaTrabalho() {
             value={termoBusca}
             onChange={(e) => setTermoBusca(e.target.value)}
           />
-
-          <div className="botoes-filtro-status">
-            <button
-              type="button"
-              className={`btn-filtro ${filtroStatus === "TODOS" ? "ativo" : ""}`}
-              onClick={() => setFiltroStatus("TODOS")}
-            >
-              Todos
-            </button>
-            <button
-              type="button"
-              className={`btn-filtro ${filtroStatus === "PENDENTES" ? "ativo" : ""}`}
-              onClick={() => setFiltroStatus("PENDENTES")}
-            >
-              Pendentes
-            </button>
-            <button
-              type="button"
-              className={`btn-filtro ${filtroStatus === "REVISADOS" ? "ativo" : ""}`}
-              onClick={() => setFiltroStatus("REVISADOS")}
-            >
-              Revisados
-            </button>
-          </div>
         </div>
 
+        {/* TABELA DE ANÁLISES */}
         <div className="card-analisa tabela-wrapper">
           <table className="tabela-fila">
             <thead>
@@ -186,33 +152,64 @@ export default function TecnicoFilaTrabalho() {
                 <th style={{ textAlign: "center" }}>Ação</th>
               </tr>
             </thead>
+
             <tbody>
               {dadosFiltrados.length === 0 ? (
                 <tr>
-                  <td colSpan="7" style={{ textAlign: "center", padding: "24px" }}>
-                    Nenhuma análise encontrada.
+                  <td
+                    colSpan="7"
+                    style={{
+                      textAlign: "center",
+                      padding: "24px",
+                    }}
+                  >
+                    {error
+                      ? "Não foi possível carregar as análises."
+                      : dadosExibicao.length === 0
+                        ? "Nenhuma análise pendente no momento."
+                        : "Nenhuma análise encontrada para essa busca."}
                   </td>
                 </tr>
               ) : (
                 dadosFiltrados.map((item) => (
                   <tr key={item.id}>
-                    <td>{item.dataEnvio}</td>
-                    <td style={{ fontWeight: 600 }}>{item.produtorNome}</td>
-                    <td>{item.fazendaNome}</td>
-                    <td>{item.especieIa}</td>
                     <td>
-                      <span className="badge-confianca">{item.confiancaIa}%</span>
+                      {item.dataEnvio
+                        ? new Date(item.dataEnvio).toLocaleDateString("pt-BR")
+                        : "—"}
                     </td>
+
+                    <td style={{ fontWeight: 600 }}>
+                      {item.produtorNome || "—"}
+                    </td>
+
+                    <td>{item.fazendaNome || "—"}</td>
+
+                    <td>{item.especieIa || "—"}</td>
+
                     <td>
-                      <span className={`status-pill ${item.status === "Pendente" ? "status-pendente" : "status-revisado"}`}>
-                        {item.status}
+                      <span className="badge-confianca">
+                        {item.confiancaIa != null
+                          ? `${item.confiancaIa}%`
+                          : "—"}
                       </span>
                     </td>
+
+                    <td>
+                      <span className="status-pill status-pendente">
+                        {item.status || "Pendente"}
+                      </span>
+                    </td>
+
                     <td style={{ textAlign: "center" }}>
                       <button
                         type="button"
                         className="btn-acao-revisar"
-                        onClick={() => navigate("/revisao-diagnostico", { state: item })}
+                        onClick={() =>
+                          navigate("/revisao-diagnostico", {
+                            state: item,
+                          })
+                        }
                       >
                         Revisar
                       </button>

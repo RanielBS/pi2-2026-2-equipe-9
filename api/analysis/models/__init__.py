@@ -1,3 +1,4 @@
 from .search_request_model import SearchRequest
 from .plant_analysis_result_model import PlantAnalysisResult
 from .search_error_log_model import SearchErrorLog
+from .technical_review_model import TechnicalReview

@@ -1,30 +1,26 @@
+
+import jwt
 from decouple import config
 
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 
-import jwt
-
-from users.models.user_model import User
-
+from users.models.user_model import User, UserStatus
 
 
 class JwtAuthentication(BaseAuthentication):
+
     def authenticate_header(self, request):
         return "Bearer"
 
     def authenticate(self, request):
 
-        auth_header = request.headers.get(
-            "Authorization"
-        )
+        auth_header = request.headers.get("Authorization")
 
         if not auth_header:
             return None
 
-        if not auth_header.startswith(
-            "Bearer "
-        ):
+        if not auth_header.startswith("Bearer "):
             raise AuthenticationFailed(
                 "Token inválido."
             )
@@ -32,7 +28,6 @@ class JwtAuthentication(BaseAuthentication):
         token = auth_header[7:]
 
         try:
-
             payload = jwt.decode(
                 token,
                 config("JWT_SECRET_KEY"),
@@ -50,12 +45,17 @@ class JwtAuthentication(BaseAuthentication):
             )
 
         user = User.objects.filter(
-            id=payload["sub"]
+            id=payload.get("sub")
         ).first()
 
         if user is None:
             raise AuthenticationFailed(
                 "Usuário não encontrado."
+            )
+
+        if user.status != UserStatus.ACTIVE:
+            raise AuthenticationFailed(
+                "Sua conta está inativa ou bloqueada."
             )
 
         return (

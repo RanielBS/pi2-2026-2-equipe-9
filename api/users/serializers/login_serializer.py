@@ -1,3 +1,4 @@
+
 from phonenumber_field.serializerfields import PhoneNumberField
 from rest_framework import serializers
 
@@ -11,7 +12,7 @@ class LoginSerializer(serializers.Serializer):
     phone = PhoneNumberField(
         region="BR",
         required=True,
-        help_text="Telefone do usuário no formato brasileiro (Ex: +55 11 99999-9999)"
+        help_text="Telefone do usuário no formato brasileiro (Ex: 11 99999-9999)"
     )
 
     password = serializers.CharField(
@@ -23,6 +24,6 @@ class LoginSerializer(serializers.Serializer):
 
     def to_dto(self):
         return LoginDto(
-            phone=self.validated_data.get("phone"),
+            phone=str(self.validated_data.get("phone")),
             password=self.validated_data.get("password")
         )

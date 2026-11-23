@@ -5,13 +5,19 @@ import jwt
 from decouple import config
 from django.contrib.auth.hashers import check_password, make_password
 from django.db import transaction
-from rest_framework.exceptions import ParseError
+from rest_framework.exceptions import ParseError, PermissionDenied
 
 from users.dtos.login_dto import LoginDto
 from users.dtos.register_user_dto import RegisterUserDTO
 from users.dtos.update_user_dto import UpdateUserDTO
 from users.models.farm_model import Farm
-from users.models.user_model import User, UserRole, UserStatus
+from users.models.technician_profile_model import TechnicianProfile
+from users.models.user_model import (
+    User,
+    UserRole,
+    UserStatus,
+    TechnicianApprovalStatus
+)
 
 
 class UserService:
@@ -29,7 +35,22 @@ class UserService:
         }
 
     @staticmethod
+    def _technician_profile_data(profile):
+        if not profile:
+            return None
+
+        return {
+            "technician_type": profile.technician_type,
+            "is_professor": profile.is_professor,
+            "institution": profile.institution,
+            "course": profile.course,
+            "qualification_description": profile.qualification_description
+        }
+
+    @staticmethod
     def _user_data(user, farm=None):
+        profile = getattr(user, "technician_profile", None)
+
         return {
             "id": user.id,
             "name": user.name,
@@ -39,7 +60,10 @@ class UserService:
             "professional_register": user.professional_register,
             "specialty": user.specialty,
             "status": user.status,
-            "farm": UserService._farm_data(farm)
+            "approval_status": user.approval_status,
+            "can_approve_technicians": user.can_approve_technicians,
+            "farm": UserService._farm_data(farm),
+            "technician_profile": UserService._technician_profile_data(profile)
         }
 
     @staticmethod
@@ -56,10 +80,16 @@ class UserService:
             raise ParseError("Tipo de usuário inválido")
 
         if dto.role == UserRole.TECHNICIAN:
-            if User.objects.filter(
+            if dto.professional_register and User.objects.filter(
                 professional_register=dto.professional_register
             ).exists():
                 raise ParseError("Registro profissional já cadastrado")
+
+        approval_status = (
+            TechnicianApprovalStatus.PENDING
+            if dto.role == UserRole.TECHNICIAN
+            else TechnicianApprovalStatus.NOT_REQUIRED
+        )
 
         user = User.objects.create(
             name=dto.name,
@@ -77,12 +107,25 @@ class UserService:
                 if dto.role == UserRole.TECHNICIAN
                 else None
             ),
-            status=UserStatus.ACTIVE
+            status=UserStatus.ACTIVE,
+            approval_status=approval_status,
+            can_approve_technicians=False
         )
+
+        if dto.role == UserRole.TECHNICIAN:
+            TechnicianProfile.objects.create(
+                user=user,
+                technician_type=dto.technician_type,
+                is_professor=dto.is_professor,
+                institution=dto.institution or "",
+                course=dto.course or "",
+                qualification_description=(
+                    dto.qualification_description or ""
+                )
+            )
 
         farm = None
 
-        # Técnicos não precisam de uma fazenda cadastrada.
         if dto.role == UserRole.PRODUCER and dto.farm:
             farm = Farm.objects.create(
                 user=user,
@@ -106,6 +149,9 @@ class UserService:
 
         if not check_password(dto.password, user.password_hash):
             raise ParseError("Telefone ou senha incorretos")
+
+        if user.status != UserStatus.ACTIVE:
+            raise ParseError("Esta conta está inativa ou bloqueada.")
 
         farm = Farm.objects.filter(user=user).first()
 
@@ -140,9 +186,9 @@ class UserService:
         if not requester:
             raise ParseError("Usuário solicitante não encontrado")
 
-        if not requester.is_admin:
+        if not requester.is_admin or requester.status != UserStatus.ACTIVE:
             raise ParseError(
-                "Apenas administradores podem criar administradores"
+                "Apenas administradores ativos podem criar administradores"
             )
 
         user = User.objects.create(
@@ -170,9 +216,9 @@ class UserService:
                 "Usuário solicitante não encontrado"
             )
 
-        if not requester.is_admin:
+        if not requester.is_admin or requester.status != UserStatus.ACTIVE:
             raise ParseError(
-                "Apenas administradores podem realizar esta operação"
+                "Apenas administradores ativos podem realizar esta operação"
             )
 
         admins = User.objects.filter(is_admin=True)
@@ -200,25 +246,43 @@ class UserService:
                 "Usuário solicitante não encontrado"
             )
 
-        if not requester.is_admin:
+        if not requester.is_admin or requester.status != UserStatus.ACTIVE:
             raise ParseError(
-                "Apenas administradores podem realizar esta operação"
+                "Apenas administradores ativos podem realizar esta operação"
             )
 
-        users = User.objects.filter(is_admin=False)
+        users = User.objects.filter(
+            is_admin=False
+        ).select_related(
+            "technician_profile"
+        ).order_by("id")
 
-        return [
-            {
+        result = []
+
+        for user in users:
+            farm = None
+
+            if user.role == UserRole.PRODUCER:
+                farm = Farm.objects.filter(user=user).first()
+
+            result.append({
                 "id": user.id,
                 "name": user.name,
                 "phone": user.phone,
+                "is_admin": user.is_admin,
                 "role": user.role,
                 "professional_register": user.professional_register,
                 "specialty": user.specialty,
-                "status": user.status
-            }
-            for user in users
-        ]
+                "status": user.status,
+                "approval_status": user.approval_status,
+                "can_approve_technicians": user.can_approve_technicians,
+                "farm": UserService._farm_data(farm),
+                "technician_profile": UserService._technician_profile_data(
+                    getattr(user, "technician_profile", None)
+                )
+            })
+
+        return result
 
     @staticmethod
     @transaction.atomic
@@ -233,9 +297,9 @@ class UserService:
                 "Usuário solicitante não encontrado"
             )
 
-        if not requester.is_admin:
+        if not requester.is_admin or requester.status != UserStatus.ACTIVE:
             raise ParseError(
-                "Apenas administradores podem alterar status"
+                "Apenas administradores ativos podem alterar status"
             )
 
         user = User.objects.filter(
@@ -306,4 +370,136 @@ class UserService:
         return {
             "message": "Dados cadastrais atualizados com sucesso.",
             "user": UserService._user_data(user, farm)
+        }
+
+    @staticmethod
+    def _can_approve_technicians(user):
+
+        if user.status != UserStatus.ACTIVE:
+            return False
+
+        if user.is_admin:
+            return True
+
+        return (
+            user.role == UserRole.TECHNICIAN
+            and user.approval_status == TechnicianApprovalStatus.APPROVED
+            and user.can_approve_technicians
+        )
+
+    @staticmethod
+    def list_pending_technicians(requester):
+
+        if not UserService._can_approve_technicians(requester):
+            raise PermissionDenied(
+                "Você não tem permissão para aprovar técnicos."
+            )
+
+        technicians = User.objects.filter(
+            role=UserRole.TECHNICIAN,
+            approval_status=TechnicianApprovalStatus.PENDING
+        ).select_related(
+            "technician_profile"
+        ).order_by("id")
+
+        result = []
+
+        for technician in technicians:
+            result.append({
+                "id": technician.id,
+                "name": technician.name,
+                "phone": technician.phone,
+                "professional_register": technician.professional_register,
+                "specialty": technician.specialty,
+                "status": technician.status,
+                "approval_status": technician.approval_status,
+                "can_approve_technicians": technician.can_approve_technicians,
+                "technician_profile": UserService._technician_profile_data(
+                    getattr(technician, "technician_profile", None)
+                )
+            })
+
+        return result
+
+    @staticmethod
+    @transaction.atomic
+    def review_technician(requester, user_id, approval_status):
+
+        if not UserService._can_approve_technicians(requester):
+            raise PermissionDenied(
+                "Você não tem permissão para aprovar técnicos."
+            )
+
+        if approval_status not in [
+            TechnicianApprovalStatus.APPROVED,
+            TechnicianApprovalStatus.REJECTED
+        ]:
+            raise ParseError("Situação de aprovação inválida.")
+
+        technician = User.objects.filter(
+            id=user_id,
+            role=UserRole.TECHNICIAN
+        ).first()
+
+        if not technician:
+            raise ParseError("Técnico não encontrado.")
+
+        if technician.approval_status != TechnicianApprovalStatus.PENDING:
+            raise ParseError(
+                "Este técnico não está aguardando aprovação."
+            )
+
+        technician.approval_status = approval_status
+
+        technician.save(update_fields=["approval_status"])
+
+        return {
+            "message": "Situação de aprovação atualizada com sucesso.",
+            "user_id": technician.id,
+            "approval_status": technician.approval_status
+        }
+
+    @staticmethod
+    @transaction.atomic
+    def set_technician_approval_authority(
+        requester,
+        user_id,
+        can_approve
+    ):
+
+        if (
+            requester.status != UserStatus.ACTIVE
+            or not requester.is_admin
+        ):
+            raise PermissionDenied(
+                "Somente administradores ativos podem conceder ou retirar "
+                "a autoridade de aprovação."
+            )
+
+        if not isinstance(can_approve, bool):
+            raise ParseError(
+                "A permissão deve ser informada como verdadeiro ou falso."
+            )
+
+        technician = User.objects.filter(
+            id=user_id,
+            role=UserRole.TECHNICIAN
+        ).first()
+
+        if not technician:
+            raise ParseError("Técnico não encontrado.")
+
+        if technician.approval_status != TechnicianApprovalStatus.APPROVED:
+            raise ParseError(
+                "A autoridade só pode ser concedida a técnicos aprovados."
+            )
+
+        technician.can_approve_technicians = can_approve
+
+        technician.save(update_fields=["can_approve_technicians"])
+
+        return {
+            "message": "Autoridade de aprovação atualizada com sucesso.",
+            "user_id": technician.id,
+            "can_approve_technicians": technician.can_approve_technicians
         }

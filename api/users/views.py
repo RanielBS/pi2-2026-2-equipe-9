@@ -17,6 +17,10 @@ from users.serializers.login_serializer import LoginSerializer
 from users.serializers.register_admin_serializer import RegisterAdminSerializer
 from users.serializers.register_user_serializer import RegisterUserSerializer
 from users.serializers.update_user_serializer import UpdateUserSerializer
+from users.serializers.technician_approval_serializer import (
+    ReviewTechnicianSerializer,
+    TechnicianApprovalAuthoritySerializer,
+)
 from users.serializers.response_serializers import (
     LoginResponseSerializer,
     RegisterUserResponseSerializer,
@@ -29,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 class UserViewSet(viewsets.ViewSet):
     """
-    API de Usuários.
+    API de usuários.
 
     Endpoints para autenticação e gerenciamento de usuários.
     """
@@ -41,16 +45,16 @@ class UserViewSet(viewsets.ViewSet):
         return [IsAuthenticated()]
 
     def get_serializer_class(self):
-        """
-        Informa ao Swagger qual serializer utilizar
-        em cada ação do UserViewSet.
-        """
         serializers = {
             "login": LoginSerializer,
             "create": RegisterUserSerializer,
             "create_admin": RegisterAdminSerializer,
             "change_status": ChangeStatusSerializer,
             "update_profile": UpdateUserSerializer,
+            "review_technician": ReviewTechnicianSerializer,
+            "set_technician_approval_authority": (
+                TechnicianApprovalAuthoritySerializer
+            ),
         }
 
         return serializers.get(self.action)
@@ -75,10 +79,7 @@ class UserViewSet(viewsets.ViewSet):
 
         logger.info("[HTTP 200 OK] Login realizado com sucesso.")
 
-        return Response(
-            result,
-            status=status.HTTP_200_OK,
-        )
+        return Response(result, status=status.HTTP_200_OK)
 
     @extend_schema(
         summary="Registrar Novo Usuário",
@@ -101,10 +102,7 @@ class UserViewSet(viewsets.ViewSet):
             "foram persistidos no banco de dados."
         )
 
-        return Response(
-            result,
-            status=status.HTTP_201_CREATED,
-        )
+        return Response(result, status=status.HTTP_201_CREATED)
 
     @extend_schema(
         summary="Registrar Administrador",
@@ -116,11 +114,7 @@ class UserViewSet(viewsets.ViewSet):
             403: {"description": "Acesso negado"},
         },
     )
-    @action(
-        detail=False,
-        methods=["post"],
-        url_path="admins",
-    )
+    @action(detail=False, methods=["post"], url_path="admins")
     def create_admin(self, request):
         serializer = RegisterAdminSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -133,11 +127,7 @@ class UserViewSet(viewsets.ViewSet):
                 "administrador com solicitante diferente do usuário autenticado."
             )
             return Response(
-                {
-                    "message": (
-                        "Você não tem permissão para realizar esta operação."
-                    )
-                },
+                {"message": "Você não tem permissão para realizar esta operação."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -147,11 +137,7 @@ class UserViewSet(viewsets.ViewSet):
                 "tentou criar um administrador."
             )
             return Response(
-                {
-                    "message": (
-                        "Apenas administradores podem criar administradores."
-                    )
-                },
+                {"message": "Apenas administradores podem criar administradores."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -162,16 +148,13 @@ class UserViewSet(viewsets.ViewSet):
             "com sucesso no banco de dados."
         )
 
-        return Response(
-            result,
-            status=status.HTTP_201_CREATED,
-        )
+        return Response(result, status=status.HTTP_201_CREATED)
 
     @extend_schema(
         summary="Listar Administradores",
         description=(
             "Lista os administradores cadastrados. "
-            "A operação exige autenticação e autorização de administrador."
+            "Exige autenticação e autorização de administrador."
         ),
         parameters=[
             OpenApiParameter(
@@ -188,11 +171,7 @@ class UserViewSet(viewsets.ViewSet):
             403: {"description": "Acesso negado"},
         },
     )
-    @action(
-        detail=False,
-        methods=["get"],
-        url_path="admins/list",
-    )
+    @action(detail=False, methods=["get"], url_path="admins/list")
     def list_admins(self, request):
         requested_by = request.query_params.get("requested_by")
 
@@ -208,11 +187,7 @@ class UserViewSet(viewsets.ViewSet):
                 "com solicitante diferente do usuário autenticado."
             )
             return Response(
-                {
-                    "message": (
-                        "Você não tem permissão para realizar esta operação."
-                    )
-                },
+                {"message": "Você não tem permissão para realizar esta operação."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -222,11 +197,7 @@ class UserViewSet(viewsets.ViewSet):
                 "tentou listar administradores."
             )
             return Response(
-                {
-                    "message": (
-                        "Apenas administradores podem realizar esta operação."
-                    )
-                },
+                {"message": "Apenas administradores podem realizar esta operação."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -237,16 +208,13 @@ class UserViewSet(viewsets.ViewSet):
             "com sucesso no banco de dados."
         )
 
-        return Response(
-            result,
-            status=status.HTTP_200_OK,
-        )
+        return Response(result, status=status.HTTP_200_OK)
 
     @extend_schema(
         summary="Listar Usuários",
         description=(
             "Lista os usuários cadastrados. "
-            "A operação exige autenticação e autorização de administrador."
+            "Exige autenticação e autorização de administrador."
         ),
         parameters=[
             OpenApiParameter(
@@ -278,11 +246,7 @@ class UserViewSet(viewsets.ViewSet):
                 "com solicitante diferente do usuário autenticado."
             )
             return Response(
-                {
-                    "message": (
-                        "Você não tem permissão para realizar esta operação."
-                    )
-                },
+                {"message": "Você não tem permissão para realizar esta operação."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -292,11 +256,7 @@ class UserViewSet(viewsets.ViewSet):
                 "tentou listar usuários."
             )
             return Response(
-                {
-                    "message": (
-                        "Apenas administradores podem realizar esta operação."
-                    )
-                },
+                {"message": "Apenas administradores podem realizar esta operação."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -307,10 +267,7 @@ class UserViewSet(viewsets.ViewSet):
             "realizada com sucesso no banco de dados."
         )
 
-        return Response(
-            result,
-            status=status.HTTP_200_OK,
-        )
+        return Response(result, status=status.HTTP_200_OK)
 
     @extend_schema(
         summary="Alterar Status do Usuário",
@@ -322,11 +279,7 @@ class UserViewSet(viewsets.ViewSet):
             403: {"description": "Acesso negado"},
         },
     )
-    @action(
-        detail=False,
-        methods=["patch"],
-        url_path="status",
-    )
+    @action(detail=False, methods=["patch"], url_path="status")
     def change_status(self, request):
         serializer = ChangeStatusSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -339,11 +292,7 @@ class UserViewSet(viewsets.ViewSet):
                 "com solicitante diferente do usuário autenticado."
             )
             return Response(
-                {
-                    "message": (
-                        "Você não tem permissão para realizar esta operação."
-                    )
-                },
+                {"message": "Você não tem permissão para realizar esta operação."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -353,11 +302,7 @@ class UserViewSet(viewsets.ViewSet):
                 "tentou alterar o status de outro usuário."
             )
             return Response(
-                {
-                    "message": (
-                        "Apenas administradores podem realizar esta operação."
-                    )
-                },
+                {"message": "Apenas administradores podem realizar esta operação."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -368,10 +313,7 @@ class UserViewSet(viewsets.ViewSet):
             dto.user_id,
         )
 
-        return Response(
-            result,
-            status=status.HTTP_200_OK,
-        )
+        return Response(result, status=status.HTTP_200_OK)
 
     @extend_schema(
         summary="Atualizar Dados Cadastrais",
@@ -387,22 +329,14 @@ class UserViewSet(viewsets.ViewSet):
             404: {"description": "Usuário não encontrado"},
         },
     )
-    @action(
-        detail=False,
-        methods=["patch"],
-        url_path="profile",
-    )
+    @action(detail=False, methods=["patch"], url_path="profile")
     def update_profile(self, request):
-        """
-        Atualiza os dados cadastrais do usuário autenticado.
-        """
         serializer = UpdateUserSerializer(
             data=request.data,
             partial=True,
         )
 
         serializer.is_valid(raise_exception=True)
-
         dto = serializer.to_dto()
 
         if dto.user_id is None:
@@ -417,11 +351,7 @@ class UserViewSet(viewsets.ViewSet):
                 "de outro usuário."
             )
             return Response(
-                {
-                    "message": (
-                        "Você não tem permissão para alterar este perfil."
-                    )
-                },
+                {"message": "Você não tem permissão para alterar este perfil."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -433,7 +363,103 @@ class UserViewSet(viewsets.ViewSet):
             dto.user_id,
         )
 
-        return Response(
-            result,
-            status=status.HTTP_200_OK,
+        return Response(result, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        summary="Listar Técnicos Pendentes",
+        description=(
+            "Lista os técnicos que aguardam aprovação. "
+            "Disponível para administradores e técnicos aprovadores."
+        ),
+        responses={
+            200: OpenApiTypes.OBJECT,
+            403: {"description": "Acesso negado"},
+        },
+    )
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="technicians/pending",
+    )
+    def list_pending_technicians(self, request):
+        result = UserService.list_pending_technicians(request.user)
+
+        logger.info(
+            "[HTTP 200 OK] Lista de técnicos pendentes consultada."
         )
+
+        return Response(result, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        summary="Aprovar ou Rejeitar Técnico",
+        description=(
+            "Permite que um administrador ou técnico aprovador "
+            "aprove ou rejeite um cadastro pendente."
+        ),
+        request=ReviewTechnicianSerializer,
+        responses={
+            200: OpenApiTypes.OBJECT,
+            400: {"description": "Dados inválidos ou técnico não pendente"},
+            403: {"description": "Acesso negado"},
+        },
+    )
+    @action(
+        detail=True,
+        methods=["patch"],
+        url_path="approval",
+    )
+    def review_technician(self, request, pk=None):
+        serializer = ReviewTechnicianSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        result = UserService.review_technician(
+            requester=request.user,
+            user_id=pk,
+            approval_status=serializer.validated_data["approval_status"],
+        )
+
+        logger.info(
+            "[HTTP 200 OK] Revisão do técnico ID %s realizada.",
+            pk,
+        )
+
+        return Response(result, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        summary="Conceder ou Retirar Autoridade de Aprovação",
+        description=(
+            "Permite exclusivamente ao administrador conceder "
+            "ou retirar a autoridade de aprovação de um técnico aprovado."
+        ),
+        request=TechnicianApprovalAuthoritySerializer,
+        responses={
+            200: OpenApiTypes.OBJECT,
+            400: {"description": "Dados inválidos"},
+            403: {"description": "Acesso negado"},
+        },
+    )
+    @action(
+        detail=True,
+        methods=["patch"],
+        url_path="approval-authority",
+    )
+    def set_technician_approval_authority(self, request, pk=None):
+        serializer = TechnicianApprovalAuthoritySerializer(
+            data=request.data
+        )
+        serializer.is_valid(raise_exception=True)
+
+        result = UserService.set_technician_approval_authority(
+            requester=request.user,
+            user_id=pk,
+            can_approve=serializer.validated_data[
+                "can_approve_technicians"
+            ],
+        )
+
+        logger.info(
+            "[HTTP 200 OK] Autoridade de aprovação do técnico ID %s atualizada.",
+            pk,
+        )
+
+        return Response(result, status=status.HTTP_200_OK)

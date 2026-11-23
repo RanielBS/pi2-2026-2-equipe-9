@@ -1,9 +1,18 @@
+
 import { create } from "zustand";
 import api from "../api/api";
 
 const formatPhoneE164 = (phone) => {
   const digits = phone.replace(/\D/g, "");
   return digits.startsWith("55") ? `+${digits}` : `+55${digits}`;
+};
+
+const normalizarPapel = (role) => {
+  if (["tecnico", "technician"].includes(role)) {
+    return "tecnico";
+  }
+
+  return "produtor";
 };
 
 const useAuthStore = create((set) => ({
@@ -15,36 +24,27 @@ const useAuthStore = create((set) => ({
     set({ loading: true });
 
     try {
-      const formattedPhone = formatPhoneE164(telefone);
       const response = await api.post("users/login/", {
-        phone: formattedPhone,
-        password: password,
+        phone: formatPhoneE164(telefone),
+        password,
       });
 
       const data = response.data;
-      let userData = data.user || data;
+      const userData = data.user || data;
 
-      // BLINDAGEM NO LOGIN: Se tem registro profissional ou papel de técnico, garante o role "tecnico"
-      const isTecnicoLogin = 
-        Boolean(userData?.professional_register) || 
-        userData?.role === "technician" || 
-        userData?.role === "tecnico" || 
-        userData?.tipo === "tecnico";
-
-      userData = {
+      const usuario = {
         ...userData,
-        role: isTecnicoLogin ? "tecnico" : "produtor",
-        professional_register: userData?.professional_register || (isTecnicoLogin ? "REG-TECNICO" : null)
+        role: normalizarPapel(userData.role),
       };
 
       set({
-        user: userData,
+        user: usuario,
         token: data.token,
         loading: false,
       });
 
       localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(userData));
+      localStorage.setItem("user", JSON.stringify(usuario));
     } catch (error) {
       set({ loading: false });
       throw error;
@@ -55,47 +55,27 @@ const useAuthStore = create((set) => ({
     set({ loading: true });
 
     try {
-      const isTecnicoForm = 
-        Boolean(payload.professional_register) || 
-        payload.role === "technician" || 
-        payload.role === "tecnico" || 
-        payload.tipo === "tecnico";
-
       const formattedPayload = {
         ...payload,
         phone: formatPhoneE164(payload.phone),
-        role: isTecnicoForm ? "tecnico" : "produtor"
+        role: normalizarPapel(payload.role),
       };
 
       const response = await api.post("users/", formattedPayload);
       const data = response.data;
 
-      let userData = data.user || data;
-
-      userData = {
-        ...userData,
-        role: isTecnicoForm ? "tecnico" : "produtor",
-        professional_register: payload.professional_register || userData.professional_register || (isTecnicoForm ? "REG-TECNICO" : null)
-      };
-
-      set({
-        user: userData,
-        token: data.token || useAuthStore.getState().token,
-        loading: false,
-      });
-
-      if (data.token) {
-        localStorage.setItem("token", data.token);
-      }
-      localStorage.setItem("user", JSON.stringify(userData));
-    } catch (err) {
       set({ loading: false });
-      throw err;
+
+      return data;
+    } catch (error) {
+      set({ loading: false });
+      throw error;
     }
   },
 
   setUser: (user) => {
     set({ user });
+
     if (user) {
       localStorage.setItem("user", JSON.stringify(user));
     } else {

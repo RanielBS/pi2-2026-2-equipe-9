@@ -1,3 +1,4 @@
+
 import { create } from "zustand";
 import api from "../api/api";
 
@@ -10,6 +11,7 @@ const useAnalysisStore = create((set) => ({
   analysisHistory: [],
   pendingAnalyses: [],
 
+  // Criar análise de imagem
   createAnalysis: async (image, userId) => {
     set({ loading: true, error: null });
 
@@ -39,6 +41,7 @@ const useAnalysisStore = create((set) => ({
     }
   },
 
+  // Buscar histórico de análises
   fetchAnalysisHistory: async (userId) => {
     set({ loading: true, error: null });
 
@@ -67,6 +70,7 @@ const useAnalysisStore = create((set) => ({
     }
   },
 
+  // Buscar análise por ID
   fetchAnalysisById: async (searchRequestId, userId) => {
     set({ loading: true, error: null });
 
@@ -80,10 +84,15 @@ const useAnalysisStore = create((set) => ({
       const data = response.data;
 
       set({
-        analysis: data.analysis_results.map((result) => ({ ...result, image: data.image })),
+        analysis: data.analysis_results.map((result) => ({
+          ...result,
+          image: data.image,
+        })),
         searchRequestId: data.search_request_id,
         loading: false,
       });
+
+      return data;
     } catch (err) {
       set({
         error: err.message || "Erro ao buscar análise",
@@ -94,7 +103,7 @@ const useAnalysisStore = create((set) => ({
     }
   },
 
-  // ==================== NOVAS AÇÕES (TÉCNICO AGRÍCOLA) ====================
+  // ==================== AÇÕES DO TÉCNICO AGRÍCOLA ====================
 
   // Buscar fila de análises pendentes para o técnico
   fetchPendingAnalyses: async () => {
@@ -105,14 +114,29 @@ const useAnalysisStore = create((set) => ({
       const data = response.data;
 
       set({
-        pendingAnalyses: data,
+        pendingAnalyses: Array.isArray(data) ? data : [],
         loading: false,
+        error: null,
       });
 
       return data;
     } catch (err) {
+      const statusCode = err.response?.status;
+
+      const mensagemErro =
+        err.response?.data?.message ||
+        err.response?.data?.detail ||
+        (statusCode === 401
+          ? "Sua sessão expirou. Faça login novamente."
+          : statusCode === 403
+            ? "Seu cadastro técnico ainda não foi aprovado. Aguarde a aprovação para acessar a fila."
+            : !err.response
+              ? "Não foi possível conectar à API. Verifique se o servidor está funcionando."
+              : "Erro ao carregar a fila de trabalho.");
+
       set({
-        error: err.response?.data?.detail || err.message || "Erro ao carregar a fila de trabalho",
+        pendingAnalyses: [],
+        error: mensagemErro,
         loading: false,
       });
 
@@ -125,14 +149,23 @@ const useAnalysisStore = create((set) => ({
     set({ loading: true, error: null });
 
     try {
-      const response = await api.patch(`analysis/${analysisId}/review/`, reviewData);
+      const response = await api.patch(
+        `analysis/${analysisId}/review/`,
+        reviewData
+      );
+
       const data = response.data;
 
       set({ loading: false });
+
       return data;
     } catch (err) {
       set({
-        error: err.response?.data?.detail || err.message || "Erro ao enviar o parecer técnico",
+        error:
+          err.response?.data?.message ||
+          err.response?.data?.detail ||
+          err.message ||
+          "Erro ao enviar o parecer técnico",
         loading: false,
       });
 

@@ -5,7 +5,12 @@ from rest_framework.decorators import action
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
 from rest_framework.permissions import IsAuthenticated
+from users.models.user_model import UserStatus
 
+from analysis.models import SearchRequest, TechnicalReview
+from analysis.serializers.technical_review_serializer import (
+    TechnicalReviewSerializer,
+)
 from analysis.serializers.analysis_serializer import AnalysisSerializer
 from analysis.serializers.response_serializers import (
     AnalysisCreateResponseSerializer,
@@ -23,8 +28,21 @@ class PlantAnalysisViewSet(viewsets.ViewSet):
     Endpoints para análise de imagens de plantas e histórico de análises.
     """
 
+    def _is_approved_technician(self, user):
+        return (
+            user.role == "tecnico"
+            and user.approval_status == "aprovado"
+            and user.status == UserStatus.ACTIVE
+        )
+
     def get_permissions(self):
-        if self.action in ["list", "retrieve", "all_analysis"]:
+        if self.action in [
+            "list",
+            "retrieve",
+            "all_analysis",
+            "pending",
+            "review",
+        ]:
             return [IsAuthenticated()]
 
         return super().get_permissions()
@@ -48,8 +66,7 @@ class PlantAnalysisViewSet(viewsets.ViewSet):
     def create(self, request):
         """
         Analisa uma imagem de planta.
-
-        Aceita imagem em formato Base64 Data URI e retorna diagnóstico.
+        Aceita imagem em formato Base64 Data URI.
         """
         serializer = AnalysisSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -87,11 +104,6 @@ class PlantAnalysisViewSet(viewsets.ViewSet):
     def list(self, request):
         """
         Lista histórico de análises de um usuário.
-
-        Retorna apenas análises com resultado_type = RESULT_COMPLETE.
-        Ordenadas por data da requisição (mais recentes primeiro).
-
-        Parâmetro obrigatório: userId (query parameter).
         """
         user_id = request.query_params.get("userId")
 
@@ -171,8 +183,6 @@ class PlantAnalysisViewSet(viewsets.ViewSet):
     def retrieve(self, request, pk=None):
         """
         Obtém detalhes de uma análise específica.
-
-        Parâmetro obrigatório: userId (query parameter).
         """
         user_id = request.query_params.get("userId")
 
@@ -261,20 +271,7 @@ class PlantAnalysisViewSet(viewsets.ViewSet):
     )
     def all_analysis(self, request):
         """
-        Lista todas as análises de todos os usuários
-        (sucesso, erro e pendente).
-
-        Retorna:
-        - ID da SearchRequest
-        - Data e hora da requisição
-        - Status da análise
-        - Resultado:
-            - Se sucesso: nome da primeira planta identificada
-            - Se erro: descrição do erro
-
-        Parâmetro obrigatório:
-        - requested_by (query parameter):
-          ID do usuário solicitante (deve ser admin).
+        Lista todas as análises de todos os usuários.
         """
         requested_by = request.query_params.get("requested_by")
 
@@ -320,5 +317,166 @@ class PlantAnalysisViewSet(viewsets.ViewSet):
 
         return Response(
             result,
+            status=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        summary="Listar análises pendentes de revisão técnica",
+        description="Lista análises concluídas que ainda não foram revisadas.",
+    )
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="pending",
+    )
+    def pending(self, request):
+        if not self._is_approved_technician(request.user):
+            return Response(
+                {
+                    "message": (
+                        "Apenas técnicos aprovados podem acessar esta fila."
+                    )
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        analyses = (
+            SearchRequest.objects.filter(
+                status=SearchRequest.STATUS_COMPLETED,
+                result_type__in=[
+                    SearchRequest.RESULT_COMPLETE,
+                    SearchRequest.RESULT_PARTIAL,
+                ],
+                results__isnull=False,
+            )
+            .exclude(technical_review__isnull=False)
+            .select_related("user")
+            .prefetch_related("results")
+            .order_by("-request_date")
+            .distinct()
+        )
+
+        response_data = []
+
+        for analysis in analyses:
+            result = analysis.results.first()
+
+            if result is None:
+                continue
+
+            response_data.append({
+                "id": analysis.id,
+                "produtorNome": analysis.user.name,
+                "fazendaNome": "",
+                "dataEnvio": analysis.request_date.isoformat(),
+                "especieIa": result.common_name,
+                "confiancaIa": float(result.confidence_score),
+                "status": "Pendente",
+                "imagemUrl": PlantAnalysisService._build_media_url(
+                    analysis.image,
+                    request=request,
+                ),
+            })
+
+        return Response(
+            response_data,
+            status=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        summary="Registrar revisão técnica de análise",
+        request=TechnicalReviewSerializer,
+        responses={
+            200: {"description": "Revisão registrada com sucesso."}
+        },
+    )
+    @action(
+        detail=True,
+        methods=["patch"],
+        url_path="review",
+    )
+    def review(self, request, pk=None):
+        if not self._is_approved_technician(request.user):
+            return Response(
+                {
+                    "message": (
+                        "Apenas técnicos aprovados podem revisar análises."
+                    )
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        serializer = TechnicalReviewSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        analysis = SearchRequest.objects.filter(
+            pk=pk,
+            status=SearchRequest.STATUS_COMPLETED,
+            result_type__in=[
+                SearchRequest.RESULT_COMPLETE,
+                SearchRequest.RESULT_PARTIAL,
+            ],
+        ).first()
+
+        if analysis is None:
+            return Response(
+                {
+                    "message": (
+                        "Análise não encontrada ou não concluída."
+                    )
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        original_result = analysis.results.first()
+
+        if original_result is None:
+            return Response(
+                {
+                    "message": (
+                        "Análise não possui resultado para revisão."
+                    )
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if TechnicalReview.objects.filter(
+            search_request=analysis
+        ).exists():
+            return Response(
+                {
+                    "message": "Esta análise já possui uma revisão técnica."
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        corrected = serializer.validated_data["corrigidoPeloTecnico"]
+        final_species = serializer.validated_data.get("especieFinal")
+        opinion = serializer.validated_data["parecerTecnico"]
+
+        TechnicalReview.objects.create(
+            search_request=analysis,
+            technician=request.user,
+            final_species=final_species if corrected else None,
+            technical_opinion=opinion,
+            was_corrected=corrected,
+        )
+
+        return Response(
+            {
+                "message": "Revisão técnica registrada com sucesso.",
+                "analysis_id": analysis.id,
+                "status": (
+                    "Corrigido pelo Técnico"
+                    if corrected
+                    else "Confirmado pelo Técnico"
+                ),
+                "especieFinal": (
+                    final_species
+                    if corrected
+                    else original_result.common_name
+                ),
+                "corrigidoPeloTecnico": corrected,
+            },
             status=status.HTTP_200_OK,
         )

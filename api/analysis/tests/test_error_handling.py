@@ -125,7 +125,7 @@ class AnalysisErrorHandlingTests(APITestCase):
                 "analysis-detail",
                 kwargs={"pk": 999}
             ),
-            {"userId": 1}
+            {"userId": self.user.id}
         )
 
         self.assertEqual(

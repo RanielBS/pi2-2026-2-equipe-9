@@ -13,6 +13,11 @@ class UserRole(models.TextChoices):
     PRODUCER = "produtor", "Agricultor"
     TECHNICIAN = "tecnico", "Técnico"
 
+class TechnicianApprovalStatus(models.TextChoices):
+    NOT_REQUIRED = "nao_exigida", "Não exigida"
+    PENDING = "pendente", "Pendente"
+    APPROVED = "aprovado", "Aprovado"
+    REJECTED = "rejeitado", "Rejeitado"
 
 class User(models.Model):
     id = models.BigAutoField(primary_key=True)
@@ -52,6 +57,16 @@ class User(models.Model):
     status = models.PositiveSmallIntegerField(
         choices=UserStatus.choices,
         default=UserStatus.ACTIVE
+    )
+
+    approval_status = models.CharField(
+        max_length=20,
+        choices=TechnicianApprovalStatus.choices,
+        default=TechnicianApprovalStatus.NOT_REQUIRED
+    )
+
+    can_approve_technicians = models.BooleanField(
+        default=False
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
