@@ -132,7 +132,7 @@ Exemplos:
 
 Caso não existam riscos conhecidos:
 
-[]
+"Informa\u00e7\u00e3o insuficiente para determinar."
 
 CommonSymptoms
 
