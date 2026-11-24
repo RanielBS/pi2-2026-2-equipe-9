@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link } from "react-router-dom";
 import useAuthStore from "../../stores/authStore";
 import "./MenuLateral.css";
@@ -13,32 +12,44 @@ export default function MenuLateral({ menuAberto, setMenuAberto }) {
   const fechar = () => setMenuAberto(false);
   const { user } = useAuthStore();
 
-  // Verifica o papel considerando o backend OU a existência de registro profissional (técnico)
-  const userRole = user?.role || user?.tipo || "produtor";
-  const isTechnicianOrAdmin = 
-    ["technician", "admin", "tecnico"].includes(userRole.toLowerCase()) || 
+  const userRole = (user?.role || user?.user_type || user?.tipo || "produtor").toLowerCase();
+
+  const ehTecnico =
+    user?.is_technician === true ||
+    ["technician", "tecnico"].includes(userRole) ||
     Boolean(user?.professional_register);
+
+  const isTechnicianOrAdmin =
+    ehTecnico || user?.is_admin === true || userRole === "admin";
+
+  // Define a rota inicial de acordo com o perfil do usuário
+  const getHomeRoute = () => {
+    if (user?.is_admin === true || userRole === "admin") {
+      return "/admin";
+    }
+    if (ehTecnico) {
+      return "/homeTecnico";
+    }
+    return "/home";
+  };
+
+  const homeRoute = getHomeRoute();
 
   // Formata o texto do crachá de perfil para exibição visual
   const getRoleBadgeLabel = () => {
-    if (isTechnicianOrAdmin && user?.professional_register) {
+    if (ehTecnico) {
       return "Técnico Agrícola";
     }
-    switch (userRole.toLowerCase()) {
-      case "technician":
-      case "tecnico":
-        return "Técnico Agrícola";
-      case "admin":
-        return "Administrador";
-      default:
-        return "Produtor Rural";
+    if (user?.is_admin === true || userRole === "admin") {
+      return "Administrador";
     }
+    return "Produtor Rural";
   };
 
   // Função para tratar o clique caso o usuário não tenha permissão (Acesso Negado)
   const handleRestrictedClick = (e, allowed) => {
     if (!allowed) {
-      e.preventDefault(); // Impede a navegação
+      e.preventDefault();
       alert("Acesso Negado: Esta funcionalidade é restrita para Técnicos e Administradores.");
     } else {
       fechar();
@@ -77,7 +88,7 @@ export default function MenuLateral({ menuAberto, setMenuAberto }) {
 
         <ul className="menu-opcoes">
           <li className="opcao-item">
-            <Link to="/home" className="link-wrapper" onClick={fechar}>
+            <Link to={homeRoute} className="link-wrapper" onClick={fechar}>
               <img className="menu-icon" src={iconHome} alt="" />
               <span>Início</span>
             </Link>
@@ -85,9 +96,9 @@ export default function MenuLateral({ menuAberto, setMenuAberto }) {
 
           {/* FILA DE TRABALHO: Exibida para todos, mas apagada/bloqueada para não-técnicos */}
           <li className={`opcao-item ${!isTechnicianOrAdmin ? "opcao-bloqueada" : ""}`}>
-            <Link 
-              to={isTechnicianOrAdmin ? "/fila-trabalho" : "#"} 
-              className="link-wrapper" 
+            <Link
+              to={isTechnicianOrAdmin ? "/fila-trabalho" : "#"}
+              className="link-wrapper"
               onClick={(e) => handleRestrictedClick(e, isTechnicianOrAdmin)}
             >
               <img className="menu-icon" src={iconHistorico} alt="" />
@@ -121,7 +132,6 @@ export default function MenuLateral({ menuAberto, setMenuAberto }) {
             </li>
           </ul>
         </div>
-
       </nav>
     </>
   );

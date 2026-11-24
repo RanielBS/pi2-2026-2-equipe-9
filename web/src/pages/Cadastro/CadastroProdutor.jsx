@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 import useAuthStore from "../../stores/authStore";
 import logo from "../../assets/images/Logo-AnalisaAI.png";
 import "./Cadastrar.css";
@@ -12,9 +13,22 @@ export default function CadastroProdutor() {
   const [telefone, setTelefone] = useState("");
   const [senha, setSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
-  const [erro, setErro] = useState("");
+  const [verSenha, setVerSenha] = useState(false);
+  const [verConfirmarSenha, setVerConfirmarSenha] = useState(false);
+
+  const [erroGeral, setErroGeral] = useState("");
   const [carregandoLocal, setCarregandoLocal] = useState(false);
   const [aceitouTermos, setAceitouTermos] = useState(false);
+  const [tentouEnviar, setTentouEnviar] = useState(false);
+
+  // Controla quais campos o usuário já interagiu/saiu para mostrar erros em tempo real
+  const [tocados, setTocados] = useState({
+    nome: false,
+    telefone: false,
+    senha: false,
+    confirmarSenha: false,
+    termos: false,
+  });
 
   const [nomeFazenda, setNomeFazenda] = useState("");
   const [localidade, setLocalidade] = useState("");
@@ -34,7 +48,7 @@ export default function CadastroProdutor() {
         setEstados(ordenados);
       })
       .catch(() => {
-        setErro("Não foi possível carregar a lista de estados. Verifique sua conexão.");
+        setErroGeral("Não foi possível carregar a lista de estados. Verifique sua conexão.");
       });
   }, []);
 
@@ -54,77 +68,99 @@ export default function CadastroProdutor() {
       })
       .then((dados) => setCidades(dados))
       .catch(() => {
-        setErro("Não foi possível carregar os municípios desse estado.");
+        setErroGeral("Não foi possível carregar os municípios desse estado.");
       });
   }, [estadoSelecionado]);
 
-  const validarTelefone = (tel) => {
-    const apenasNumeros = tel.replace(/\D/g, "");
-    return apenasNumeros.length >= 10 && apenasNumeros.length <= 11;
+  // Formata automaticamente para (XX) XXXXX-XXXX ou (XX) XXXX-XXXX
+  const formatarTelefone = (valor) => {
+    const nums = valor.replace(/\D/g, "").slice(0, 11);
+    if (nums.length <= 2) return nums;
+    if (nums.length <= 6) return `(${nums.slice(0, 2)}) ${nums.slice(2)}`;
+    if (nums.length <= 10) {
+      return `(${nums.slice(0, 2)}) ${nums.slice(2, 6)}-${nums.slice(6)}`;
+    }
+    return `(${nums.slice(0, 2)}) ${nums.slice(2, 7)}-${nums.slice(7)}`;
   };
 
-  const exibirErro = (mensagem) => {
-    setErro(mensagem);
+  const digitosTelefone = telefone.replace(/\D/g, "");
+  const telefoneValido = digitosTelefone.length >= 10 && digitosTelefone.length <= 11;
+
+  // Regras de validação em tempo real
+  const erroNome = (() => {
+    if (!nome.trim()) return "O nome é obrigatório.";
+    if (nome.trim().length < 3) return "Digite pelo menos 3 caracteres.";
+    return "";
+  })();
+
+  const erroTelefone = (() => {
+    if (!digitosTelefone) return "O telefone com DDD é obrigatório.";
+    if (!telefoneValido) {
+      return `Telefone incompleto (${digitosTelefone.length}/10 ou 11 dígitos com DDD).`;
+    }
+    return "";
+  })();
+
+  const erroSenha = (() => {
+    if (!senha) return "A senha é obrigatória.";
+    if (senha.length < 6) {
+      const faltam = 6 - senha.length;
+      return `Mínimo de 6 caracteres (faltam ${faltam}).`;
+    }
+    return "";
+  })();
+
+  const erroConfirmarSenha = (() => {
+    if (!confirmarSenha) return "Confirme sua senha.";
+    if (senha !== confirmarSenha) return "As senhas não coincidem.";
+    return "";
+  })();
+
+  const preencheuAlgumDadoFazenda = Boolean(
+    nomeFazenda.trim() || estadoSelecionado || cidadeSelecionada || localidade.trim()
+  );
+
+  const preencheuTodosDadosFazenda = Boolean(
+    nomeFazenda.trim() && estadoSelecionado && cidadeSelecionada && localidade.trim()
+  );
+
+  const marcarTocado = (campo) => {
+    setTocados((prev) => ({ ...prev, [campo]: true }));
+  };
+
+  const exibirErroGeral = (mensagem) => {
+    setErroGeral(mensagem);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const limparErro = () => {
-    if (erro) setErro("");
+  const limparErroGeral = () => {
+    if (erroGeral) setErroGeral("");
   };
 
   const finalizar = async (e) => {
     e.preventDefault();
-    setErro("");
+    setErroGeral("");
+    setTentouEnviar(true);
+    setTocados({
+      nome: true,
+      telefone: true,
+      senha: true,
+      confirmarSenha: true,
+      termos: true,
+    });
 
-    // 1. Campos pessoais obrigatórios
-    if (
-      !nome.trim() ||
-      !telefone.trim() ||
-      !senha.trim() ||
-      !confirmarSenha.trim()
-    ) {
-      exibirErro("Preencha todos os campos obrigatórios.");
+    if (erroNome || erroTelefone || erroSenha || erroConfirmarSenha) {
+      exibirErroGeral("Corrija os campos destacados em vermelho antes de continuar.");
       return;
     }
-
-    // 2. Validação do nome
-    if (nome.trim().length < 3) {
-      exibirErro("O nome deve ter pelo menos 3 caracteres.");
-      return;
-    }
-
-    // 3. Validação do formato de telefone
-    if (!validarTelefone(telefone)) {
-      exibirErro("O formato do telefone é inválido. Informe DDD + número.");
-      return;
-    }
-
-    // 4. Validação da senha
-    if (senha.length < 6) {
-      exibirErro("A senha deve ter no mínimo 6 caracteres.");
-      return;
-    }
-
-    if (senha !== confirmarSenha) {
-      exibirErro("As senhas não coincidem. Verifique e tente novamente.");
-      return;
-    }
-
-    // 5. Validação dos dados da propriedade (se começou a preencher, precisa completar)
-    const preencheuAlgumDadoFazenda =
-      nomeFazenda.trim() ||
-      estadoSelecionado ||
-      cidadeSelecionada ||
-      localidade.trim();
-
-    const preencheuTodosDadosFazenda =
-      nomeFazenda.trim() &&
-      estadoSelecionado &&
-      cidadeSelecionada &&
-      localidade.trim();
 
     if (preencheuAlgumDadoFazenda && !preencheuTodosDadosFazenda) {
-      exibirErro("Preencha todos os campos da propriedade ou deixe-os em branco.");
+      exibirErroGeral("Preencha todos os campos da propriedade.");
+      return;
+    }
+
+    if (!aceitouTermos) {
+      exibirErroGeral("Você precisa aceitar os termos de uso para continuar.");
       return;
     }
 
@@ -133,9 +169,10 @@ export default function CadastroProdutor() {
     try {
       await register({
         name: nome.trim(),
-        phone: telefone.trim(),
+        phone: digitosTelefone,
         password: senha,
         confirm_password: confirmarSenha,
+        accept_terms: aceitouTermos,
         role: "producer",
         tipo: "produtor",
         farm: preencheuTodosDadosFazenda
@@ -154,7 +191,7 @@ export default function CadastroProdutor() {
       setCarregandoLocal(false);
 
       if (!err?.response) {
-        exibirErro("Sem conexão com o servidor. Verifique sua internet.");
+        exibirErroGeral("Sem conexão com o servidor. Verifique sua internet.");
         return;
       }
 
@@ -163,7 +200,7 @@ export default function CadastroProdutor() {
       const storeErrorMsg = useAuthStore.getState().error;
 
       if (status === 409) {
-        exibirErro("Este telefone já está cadastrado no sistema.");
+        exibirErroGeral("Este telefone já está cadastrado no sistema.");
       } else if (status === 400 || status === 422) {
         const msgBackend =
           data?.message ||
@@ -171,9 +208,9 @@ export default function CadastroProdutor() {
           (Array.isArray(data?.errors) ? data.errors[0]?.msg : null) ||
           storeErrorMsg ||
           "Dados inválidos. Verifique as informações preenchidas.";
-        exibirErro(msgBackend);
+        exibirErroGeral(msgBackend);
       } else {
-        exibirErro(
+        exibirErroGeral(
           data?.message ||
             data?.detail ||
             storeErrorMsg ||
@@ -227,91 +264,181 @@ export default function CadastroProdutor() {
       </button>
 
       {/* BANNER EM FORMATO PÍLULA FIGMA */}
-      {erro && (
+      {erroGeral && (
         <div className="cadastro-erro-banner">
           <span className="cadastro-erro-icon">!</span>
-          <p>{erro}</p>
+          <p>{erroGeral}</p>
         </div>
       )}
 
-      <form onSubmit={finalizar}>
+      <form onSubmit={finalizar} noValidate>
         <h4>Informações Pessoais</h4>
 
+        {/* NOME */}
         <div className="campo">
-          <label>Nome *</label>
+          <label htmlFor="cad-nome">Nome *</label>
           <input
+            id="cad-nome"
             type="text"
-            placeholder="Digite o seu nome"
+            className={(tocados.nome || tentouEnviar) && erroNome ? "input-invalido" : ""}
+            placeholder="Digite o seu nome completo"
             value={nome}
+            onBlur={() => marcarTocado("nome")}
             onChange={(e) => {
               setNome(e.target.value);
-              limparErro();
+              limparErroGeral();
             }}
           />
+          {(tocados.nome || tentouEnviar) && erroNome && (
+            <span className="texto-erro-campo">{erroNome}</span>
+          )}
         </div>
 
+        {/* TELEFONE */}
         <div className="campo">
-          <label>Telefone *</label>
+          <label htmlFor="cad-telefone">Telefone com DDD *</label>
           <input
+            id="cad-telefone"
             type="tel"
-            placeholder="Ex.: (XX) XXXXX-XXXX"
+            className={(tocados.telefone || tentouEnviar) && erroTelefone ? "input-invalido" : ""}
+            placeholder="Ex.: (88) 99999-9999"
             value={telefone}
+            onBlur={() => marcarTocado("telefone")}
             onChange={(e) => {
-              setTelefone(e.target.value);
-              limparErro();
+              setTelefone(formatarTelefone(e.target.value));
+              limparErroGeral();
             }}
           />
+          {(tocados.telefone || tentouEnviar) && erroTelefone && (
+            <span className="texto-erro-campo">{erroTelefone}</span>
+          )}
         </div>
 
+        {/* SENHA */}
         <div className="campo">
-          <label>Senha *</label>
-          <input
-            type="password"
-            placeholder="Digite a sua senha (mín. 6 caracteres)"
-            value={senha}
-            onChange={(e) => {
-              setSenha(e.target.value);
-              limparErro();
-            }}
-          />
+          <label htmlFor="cad-senha">Senha *</label>
+          <div className="input-senha-wrapper">
+            <input
+              id="cad-senha"
+              type={verSenha ? "text" : "password"}
+              className={(tocados.senha || tentouEnviar) && erroSenha ? "input-invalido" : ""}
+              placeholder="Mínimo de 6 caracteres"
+              value={senha}
+              onBlur={() => marcarTocado("senha")}
+              onChange={(e) => {
+                setSenha(e.target.value);
+                if (!tocados.senha) marcarTocado("senha");
+                limparErroGeral();
+              }}
+            />
+            <button
+              type="button"
+              className="btn-olho-cadastro"
+              onClick={() => setVerSenha(!verSenha)}
+              tabIndex={-1}
+            >
+              {verSenha ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+            </button>
+          </div>
+
+          {/* Feedback dinâmico em tempo real da senha */}
+          {senha.length > 0 && senha.length < 6 && (
+            <span className="texto-erro-campo">
+              Mínimo de 6 caracteres (faltam {6 - senha.length}).
+            </span>
+          )}
+          {senha.length >= 6 && (
+            <span className="texto-sucesso-campo">
+              ✓ Tamanho mínimo atingido ({senha.length} caracteres).
+            </span>
+          )}
+          {(tocados.senha || tentouEnviar) && senha.length === 0 && (
+            <span className="texto-erro-campo">A senha é obrigatória.</span>
+          )}
         </div>
 
+        {/* CONFIRMAR SENHA */}
         <div className="campo">
-          <label>Confirmar Senha *</label>
-          <input
-            type="password"
-            placeholder="Repita a senha"
-            value={confirmarSenha}
-            onChange={(e) => {
-              setConfirmarSenha(e.target.value);
-              limparErro();
-            }}
-          />
+          <label htmlFor="cad-confirmar-senha">Confirmar Senha *</label>
+          <div className="input-senha-wrapper">
+            <input
+              id="cad-confirmar-senha"
+              type={verConfirmarSenha ? "text" : "password"}
+              className={
+                (tocados.confirmarSenha || tentouEnviar) && erroConfirmarSenha
+                  ? "input-invalido"
+                  : ""
+              }
+              placeholder="Repita a senha"
+              value={confirmarSenha}
+              onBlur={() => marcarTocado("confirmarSenha")}
+              onChange={(e) => {
+                setConfirmarSenha(e.target.value);
+                if (!tocados.confirmarSenha) marcarTocado("confirmarSenha");
+                limparErroGeral();
+              }}
+            />
+            <button
+              type="button"
+              className="btn-olho-cadastro"
+              onClick={() => setVerConfirmarSenha(!verConfirmarSenha)}
+              tabIndex={-1}
+            >
+              {verConfirmarSenha ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+            </button>
+          </div>
+
+          {confirmarSenha.length > 0 && senha !== confirmarSenha && (
+            <span className="texto-erro-campo">As senhas não coincidem.</span>
+          )}
+          {confirmarSenha.length > 0 && senha === confirmarSenha && senha.length >= 6 && (
+            <span className="texto-sucesso-campo">✓ As senhas coincidem.</span>
+          )}
+          {(tocados.confirmarSenha || tentouEnviar) && confirmarSenha.length === 0 && (
+            <span className="texto-erro-campo">Confirme sua senha.</span>
+          )}
         </div>
 
-        <h4>Informações da Propriedade</h4>
+        <h4>Informações da Propriedade (Opcional)</h4>
 
         <div className="campo">
-          <label>Nome da Fazenda</label>
+          <label htmlFor="cad-fazenda">Nome da Fazenda</label>
           <input
+            id="cad-fazenda"
             type="text"
+            className={
+              (preencheuAlgumDadoFazenda || tentouEnviar) &&
+              preencheuAlgumDadoFazenda &&
+              !nomeFazenda.trim()
+                ? "input-invalido"
+                : ""
+            }
             placeholder="Digite o nome da fazenda"
             value={nomeFazenda}
             onChange={(e) => {
               setNomeFazenda(e.target.value);
-              limparErro();
+              limparErroGeral();
             }}
           />
+          {preencheuAlgumDadoFazenda && !nomeFazenda.trim() && (
+            <span className="texto-erro-campo">
+              Informe o nome da fazenda para completar os dados da propriedade.
+            </span>
+          )}
         </div>
 
         <div className="campo">
-          <label>Estado</label>
+          <label htmlFor="cad-estado">Estado</label>
           <select
+            id="cad-estado"
+            className={
+              preencheuAlgumDadoFazenda && !estadoSelecionado ? "input-invalido" : ""
+            }
             value={estadoSelecionado}
             onChange={(e) => {
               setEstadoSelecionado(e.target.value);
               setCidadeSelecionada("");
-              limparErro();
+              limparErroGeral();
             }}
           >
             <option value="">Selecione um estado</option>
@@ -321,16 +448,23 @@ export default function CadastroProdutor() {
               </option>
             ))}
           </select>
+          {preencheuAlgumDadoFazenda && !estadoSelecionado && (
+            <span className="texto-erro-campo">Selecione o estado da propriedade.</span>
+          )}
         </div>
 
         <div className="campo">
-          <label>Município/Cidade</label>
+          <label htmlFor="cad-cidade">Município/Cidade</label>
           <select
+            id="cad-cidade"
+            className={
+              preencheuAlgumDadoFazenda && !cidadeSelecionada ? "input-invalido" : ""
+            }
             value={cidadeSelecionada}
             disabled={!estadoSelecionado}
             onChange={(e) => {
               setCidadeSelecionada(e.target.value);
-              limparErro();
+              limparErroGeral();
             }}
           >
             <option value="">Selecione um município</option>
@@ -340,34 +474,56 @@ export default function CadastroProdutor() {
               </option>
             ))}
           </select>
+          {preencheuAlgumDadoFazenda && !cidadeSelecionada && (
+            <span className="texto-erro-campo">Selecione o município da propriedade.</span>
+          )}
         </div>
 
         <div className="campo">
-          <label>Localidade</label>
+          <label htmlFor="cad-localidade">Localidade</label>
           <input
+            id="cad-localidade"
             type="text"
-            placeholder="Digite a localidade"
+            className={
+              preencheuAlgumDadoFazenda && !localidade.trim() ? "input-invalido" : ""
+            }
+            placeholder="Ex.: Distrito, Sítio, Zona Rural"
             value={localidade}
             onChange={(e) => {
               setLocalidade(e.target.value);
-              limparErro();
+              limparErroGeral();
             }}
           />
+          {preencheuAlgumDadoFazenda && !localidade.trim() && (
+            <span className="texto-erro-campo">
+              Informe a localidade da propriedade.
+            </span>
+          )}
         </div>
 
-            <div className="campo-termos">
+        {/* TERMOS DE USO */}
+        <div className="campo-termos">
           <label className="label-termos">
             <input
               type="checkbox"
               checked={aceitouTermos}
-              onChange={(e) => setAceitouTermos(e.target.checked)}
+              onChange={(e) => {
+                setAceitouTermos(e.target.checked);
+                marcarTocado("termos");
+                limparErroGeral();
+              }}
             />
-
             <span>
               Li e aceito os <strong>termos de uso</strong> e a política de
-              privacidade.
+              privacidade (autorizando o compartilhamento das imagens com
+              técnicos agrícolas para validação).
             </span>
           </label>
+          {(tocados.termos || tentouEnviar) && !aceitouTermos && (
+            <span className="texto-erro-campo" style={{ marginTop: "6px" }}>
+              Você precisa aceitar os termos de uso para criar sua conta.
+            </span>
+          )}
         </div>
 
         <div className="campo-botao">
@@ -376,8 +532,6 @@ export default function CadastroProdutor() {
           </button>
         </div>
       </form>
-
-      
     </div>
   );
 }

@@ -52,10 +52,19 @@ export default function Login() {
         // Redireciona para o destino que o usuário tentou acessar antes de ser barrado
         const destino = location.state?.from?.pathname;
 
+        const ehTecnico =
+          currentUser.is_technician === true ||
+          currentUser.role === "technician" ||
+          currentUser.role === "tecnico" ||
+          currentUser.user_type === "technician" ||
+          currentUser.tipo === "tecnico";
+
         if (destino) {
           navigate(destino, { replace: true });
         } else if (currentUser.is_admin) {
           navigate("/admin");
+        } else if (ehTecnico) {
+          navigate("/homeTecnico");
         } else {
           navigate("/home");
         }

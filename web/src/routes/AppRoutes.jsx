@@ -16,9 +16,10 @@ import ListUsers from "../pages/Admin/ListUsers/ListUsers";
 import OpcoesCad from "../pages/Cadastro/OpcoesCad";
 import CadastroProdutor from "../pages/Cadastro/CadastroProdutor";
 import CadastroTecnico from "../pages/Cadastro/CadastroTecnico";
-
+import HomeTecnico from "../pages/Home/HomeTecnico";
 import TecnicoFilaTrabalho from "../pages/TecnicoFilaTrabalho/TecnicoFilaTrabalho";
 import TecnicoRevisaoDiagnostico from "../pages/TecnicoRevisaoDiagnostico/TecnicoRevisaoDiagnostico";
+import EsqSenha from "../pages/Login/EsqSenha";
 
 export default function AppRoutes() {
   return (
@@ -29,6 +30,7 @@ export default function AppRoutes() {
       <Route path="/opcoesCadastro" element={<OpcoesCad />} />
       <Route path="/cadastroProdutor" element={<CadastroProdutor />} />
       <Route path="/cadastroTecnico" element={<CadastroTecnico />} />
+      <Route path="/esqSenha" element={<EsqSenha />} />
 
       <Route
         path="/home"
@@ -38,6 +40,15 @@ export default function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/homeTecnico"
+        element={
+          <ProtectedRoute>
+            <HomeTecnico />
+          </ProtectedRoute>
+        }
+      />
+
       <Route
         path="/editar-perfil"
         element={
