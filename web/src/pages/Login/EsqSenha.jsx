@@ -124,6 +124,7 @@ export default function EsqSenha() {
           <div id="telefone">
             <label htmlFor="inputTelefoneRecuperacao">Telefone com DDD</label>
             <input
+            style={{padding: "15px", fontSize: "14px", borderRadius: "15px", border: "2px solid #009963"}}
               classname="campo"
               type="tel"
               placeholder="Ex.: (XX) XXXXX-XXXX"
