@@ -6,6 +6,7 @@ import Loading from "../../components/Loading";
 import useAnalysisStore from "../../stores/analysisStore";
 import logo from "../../assets/images/Logo-AnalisaAI.png";
 import "./TecnicoFilaTrabalho.css";
+import BotaoVoltarMenu from "../../components/BotaoVoltarMenu";
 
 export default function TecnicoFilaTrabalho() {
   const navigate = useNavigate();
@@ -80,6 +81,7 @@ export default function TecnicoFilaTrabalho() {
       />
 
       <main className="fila-container">
+        <BotaoVoltarMenu/>
         <div className="fila-header-titulo">
           <h2>Painel do Técnico Agrícola</h2>
           <p>

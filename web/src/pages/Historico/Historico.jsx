@@ -9,6 +9,7 @@ import useAnalysisStore from "../../stores/analysisStore";
 import useAuthStore from "../../stores/authStore";
 
 import logoClara from "../../assets/images/Logo-AnalisaAI.png";
+import BotaoVoltarMenu from "../../components/BotaoVoltarMenu";
 
 import "./Historico.css";
 
@@ -58,6 +59,7 @@ export default function Historico() {
 
       {/* CONTEÚDO */}
       <main className="historico-conteudo">
+        <BotaoVoltarMenu/>
         <h1>Histórico</h1>
 
         {loading && (
