@@ -70,6 +70,12 @@ class AnalysisDetailResultItemSerializer(serializers.Serializer):
     )
     confidence_score = serializers.FloatField()
 
+class AnalysisErrorSerializer(serializers.Serializer):
+    """Serializer para erros apresentados ao usuário."""
+    code = serializers.CharField()
+    title = serializers.CharField()
+    message = serializers.CharField()
+
 
 class AnalysisDetailResponseSerializer(serializers.Serializer):
     """Serializer para resposta de detalhes de análise."""
@@ -78,6 +84,7 @@ class AnalysisDetailResponseSerializer(serializers.Serializer):
     status = serializers.IntegerField()
     image = serializers.CharField()
     analysis_results = AnalysisDetailResultItemSerializer(many=True)
+    error = AnalysisErrorSerializer(required=False, allow_null=True)
 
 
 class AllAnalysisItemSerializer(serializers.Serializer):

@@ -46,16 +46,6 @@ export default function MenuLateral({ menuAberto, setMenuAberto }) {
     return "Produtor Rural";
   };
 
-  // Função para tratar o clique caso o usuário não tenha permissão (Acesso Negado)
-  const handleRestrictedClick = (e, allowed) => {
-    if (!allowed) {
-      e.preventDefault();
-      alert("Acesso Negado: Esta funcionalidade é restrita para Técnicos e Administradores.");
-    } else {
-      fechar();
-    }
-  };
-
   return (
     <>
       {menuAberto && (
@@ -94,17 +84,19 @@ export default function MenuLateral({ menuAberto, setMenuAberto }) {
             </Link>
           </li>
 
-          {/* FILA DE TRABALHO: Exibida para todos, mas apagada/bloqueada para não-técnicos */}
-          <li className={`opcao-item ${!isTechnicianOrAdmin ? "opcao-bloqueada" : ""}`}>
-            <Link
-              to={isTechnicianOrAdmin ? "/fila-trabalho" : "#"}
-              className="link-wrapper"
-              onClick={(e) => handleRestrictedClick(e, isTechnicianOrAdmin)}
-            >
-              <img className="menu-icon" src={iconHistorico} alt="" />
-              <span>Fila de Trabalho {!isTechnicianOrAdmin && "🔒"}</span>
-            </Link>
-          </li>
+          {/* FILA DE TRABALHO: Exibida apenas para Técnicos e Administradores */}
+          {isTechnicianOrAdmin && (
+            <li className="opcao-item">
+              <Link
+                to="/fila-trabalho"
+                className="link-wrapper"
+                onClick={fechar}
+              >
+                <img className="menu-icon" src={iconHistorico} alt="" />
+                <span>Fila de Trabalho</span>
+              </Link>
+            </li>
+          )}
 
           <li className="opcao-item">
             <Link to="/editar-perfil" className="link-wrapper" onClick={fechar}>
@@ -113,10 +105,11 @@ export default function MenuLateral({ menuAberto, setMenuAberto }) {
             </Link>
           </li>
 
+          {/* HISTÓRICO para Produtor | PLANTAS SUBMETIDAS para Técnico/Admin */}
           <li className="opcao-item">
             <Link to="/historico" className="link-wrapper" onClick={fechar}>
               <img className="menu-icon" src={iconHistorico} alt="" />
-              <span>Histórico</span>
+              <span>{isTechnicianOrAdmin ? "Plantas Submetidas" : "Histórico"}</span>
             </Link>
           </li>
         </ul>

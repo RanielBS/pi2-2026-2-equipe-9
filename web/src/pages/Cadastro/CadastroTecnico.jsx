@@ -5,6 +5,14 @@ import useAuthStore from "../../stores/authStore";
 import logo from "../../assets/images/Logo-AnalisaAI.png";
 import "./Cadastrar.css";
 
+const LIMITE_NOME = 100;
+const LIMITE_INSTITUICAO = 120;
+const LIMITE_TEXTO_CURTO = 80;
+const LIMITE_QUALIFICACAO = 150;
+const LIMITE_REGISTRO = 30;
+const MIN_SENHA = 6;
+const MAX_SENHA = 8;
+
 const cursosDisponiveis = [
   "Técnico em Agropecuária",
   "Técnico em Agricultura",
@@ -75,6 +83,10 @@ export default function CadastroTecnico() {
     termos: false,
   });
 
+  const apenasTexto = (valor, limite) => {
+    return valor.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ\s]/g, "").slice(0, limite);
+  };
+
   const formatarTelefone = (valor) => {
     const nums = valor.replace(/\D/g, "").slice(0, 11);
     if (nums.length <= 2) return nums;
@@ -85,6 +97,13 @@ export default function CadastroTecnico() {
     return `(${nums.slice(0, 2)}) ${nums.slice(2, 7)}-${nums.slice(7)}`;
   };
 
+  const formatarRegistro = (valor) => {
+    return valor
+      .toUpperCase()
+      .replace(/[^A-Z0-9\-\/\s]/g, "")
+      .slice(0, LIMITE_REGISTRO);
+  };
+
   const digitosTelefone = telefone.replace(/\D/g, "");
   const telefoneValido = digitosTelefone.length >= 10 && digitosTelefone.length <= 11;
 
@@ -92,10 +111,10 @@ export default function CadastroTecnico() {
   const especialidadeFinal =
     especialidade === "Outra" ? outraEspecialidade.trim() : especialidade.trim();
 
-  // Validações em tempo real
   const erroNome = (() => {
     if (!nome.trim()) return "O nome é obrigatório.";
     if (nome.trim().length < 3) return "Digite pelo menos 3 caracteres.";
+    if (nome.length > LIMITE_NOME) return `Máximo de ${LIMITE_NOME} caracteres.`;
     return "";
   })();
 
@@ -146,8 +165,11 @@ export default function CadastroTecnico() {
 
   const erroSenha = (() => {
     if (!senha) return "A senha é obrigatória.";
-    if (senha.length < 6) {
-      return `Mínimo de 6 caracteres (faltam ${6 - senha.length}).`;
+    if (senha.length < MIN_SENHA) {
+      return `Mínimo de ${MIN_SENHA} caracteres (faltam ${MIN_SENHA - senha.length}).`;
+    }
+    if (senha.length > MAX_SENHA) {
+      return `Máximo de ${MAX_SENHA} caracteres.`;
     }
     return "";
   })();
@@ -314,7 +336,6 @@ export default function CadastroTecnico() {
         Voltar
       </button>
 
-      {/* BANNER EM FORMATO PÍLULA FIGMA */}
       {erroGeral && (
         <div className="cadastro-erro-banner">
           <span className="cadastro-erro-icon">!</span>
@@ -325,18 +346,18 @@ export default function CadastroTecnico() {
       <form onSubmit={finalizar} noValidate>
         <h4>Informações Pessoais</h4>
 
-        {/* NOME */}
         <div className="campo">
           <label htmlFor="tec-nome">Nome *</label>
           <input
             id="tec-nome"
             type="text"
+            maxLength={LIMITE_NOME}
             className={(tocados.nome || tentouEnviar) && erroNome ? "input-invalido" : ""}
             placeholder="Digite seu nome completo"
             value={nome}
             onBlur={() => marcarTocado("nome")}
             onChange={(e) => {
-              setNome(e.target.value);
+              setNome(apenasTexto(e.target.value, LIMITE_NOME));
               limparErroGeral();
             }}
           />
@@ -345,12 +366,12 @@ export default function CadastroTecnico() {
           )}
         </div>
 
-        {/* TELEFONE */}
         <div className="campo">
           <label htmlFor="tec-telefone">Telefone com DDD *</label>
           <input
             id="tec-telefone"
             type="tel"
+            maxLength={15}
             className={(tocados.telefone || tentouEnviar) && erroTelefone ? "input-invalido" : ""}
             placeholder="Ex.: (88) 99999-9999"
             value={telefone}
@@ -367,7 +388,6 @@ export default function CadastroTecnico() {
 
         <h4>Perfil Técnico</h4>
 
-        {/* TIPO TÉCNICO */}
         <div className="campo">
           <label htmlFor="tec-perfil">Qual é o seu perfil? *</label>
           <select
@@ -397,7 +417,6 @@ export default function CadastroTecnico() {
           )}
         </div>
 
-        {/* CAMPOS ESTUDANTE */}
         {tipoTecnico === "estudante" && (
           <>
             <div className="campo">
@@ -405,12 +424,13 @@ export default function CadastroTecnico() {
               <input
                 id="tec-instituicao-est"
                 type="text"
+                maxLength={LIMITE_INSTITUICAO}
                 className={(tocados.instituicao || tentouEnviar) && erroInstituicao ? "input-invalido" : ""}
                 placeholder="Ex.: Instituto Federal do Ceará"
                 value={instituicao}
                 onBlur={() => marcarTocado("instituicao")}
                 onChange={(e) => {
-                  setInstituicao(e.target.value);
+                  setInstituicao(apenasTexto(e.target.value, LIMITE_INSTITUICAO));
                   limparErroGeral();
                 }}
               />
@@ -450,12 +470,13 @@ export default function CadastroTecnico() {
                 <input
                   id="tec-outro-curso"
                   type="text"
+                  maxLength={LIMITE_TEXTO_CURTO}
                   className={(tocados.outroCurso || tentouEnviar) && erroOutroCurso ? "input-invalido" : ""}
                   placeholder="Digite o nome do seu curso"
                   value={outroCurso}
                   onBlur={() => marcarTocado("outroCurso")}
                   onChange={(e) => {
-                    setOutroCurso(e.target.value);
+                    setOutroCurso(apenasTexto(e.target.value, LIMITE_TEXTO_CURTO));
                     limparErroGeral();
                   }}
                 />
@@ -467,7 +488,6 @@ export default function CadastroTecnico() {
           </>
         )}
 
-        {/* CAMPOS PROFISSIONAL */}
         {tipoTecnico === "profissional" && (
           <>
             <div className="campo-termos" style={{ marginBottom: "16px" }}>
@@ -493,12 +513,13 @@ export default function CadastroTecnico() {
                 <input
                   id="tec-instituicao-prof"
                   type="text"
+                  maxLength={LIMITE_INSTITUICAO}
                   className={(tocados.instituicao || tentouEnviar) && erroInstituicao ? "input-invalido" : ""}
                   placeholder="Informe sua instituição de ensino"
                   value={instituicao}
                   onBlur={() => marcarTocado("instituicao")}
                   onChange={(e) => {
-                    setInstituicao(e.target.value);
+                    setInstituicao(apenasTexto(e.target.value, LIMITE_INSTITUICAO));
                     limparErroGeral();
                   }}
                 />
@@ -539,12 +560,13 @@ export default function CadastroTecnico() {
                 <input
                   id="tec-outra-esp"
                   type="text"
+                  maxLength={LIMITE_TEXTO_CURTO}
                   className={(tocados.outraEspecialidade || tentouEnviar) && erroOutraEspecialidade ? "input-invalido" : ""}
                   placeholder="Digite sua especialidade"
                   value={outraEspecialidade}
                   onBlur={() => marcarTocado("outraEspecialidade")}
                   onChange={(e) => {
-                    setOutraEspecialidade(e.target.value);
+                    setOutraEspecialidade(apenasTexto(e.target.value, LIMITE_TEXTO_CURTO));
                     limparErroGeral();
                   }}
                 />
@@ -559,29 +581,31 @@ export default function CadastroTecnico() {
               <input
                 id="tec-qualificacao"
                 type="text"
+                maxLength={LIMITE_QUALIFICACAO}
                 className={(tocados.qualificacao || tentouEnviar) && erroQualificacao ? "input-invalido" : ""}
                 placeholder="Descreva sua formação e qualificação"
                 value={qualificacao}
                 onBlur={() => marcarTocado("qualificacao")}
                 onChange={(e) => {
-                setQualificacao(e.target.value);
-                limparErroGeral();
-    }}
-  />
-  {(tocados.qualificacao || tentouEnviar) && erroQualificacao && (
-    <span className="texto-erro-campo">{erroQualificacao}</span>
-  )}
-</div>
+                  setQualificacao(apenasTexto(e.target.value, LIMITE_QUALIFICACAO));
+                  limparErroGeral();
+                }}
+              />
+              {(tocados.qualificacao || tentouEnviar) && erroQualificacao && (
+                <span className="texto-erro-campo">{erroQualificacao}</span>
+              )}
+            </div>
 
             <div className="campo">
               <label htmlFor="tec-registro">Registro Profissional (quando aplicável)</label>
               <input
                 id="tec-registro"
                 type="text"
+                maxLength={LIMITE_REGISTRO}
                 placeholder="CREA, CFTA, CRMV etc."
                 value={registroProfissional}
                 onChange={(e) => {
-                  setRegistroProfissional(e.target.value);
+                  setRegistroProfissional(formatarRegistro(e.target.value));
                   limparErroGeral();
                 }}
               />
@@ -591,19 +615,19 @@ export default function CadastroTecnico() {
 
         <h4>Segurança</h4>
 
-        {/* SENHA */}
         <div className="campo">
           <label htmlFor="tec-senha">Senha *</label>
           <div className="input-senha-wrapper">
             <input
               id="tec-senha"
               type={verSenha ? "text" : "password"}
+              maxLength={MAX_SENHA}
               className={(tocados.senha || tentouEnviar) && erroSenha ? "input-invalido" : ""}
-              placeholder="Mínimo de 6 caracteres"
+              placeholder={`De ${MIN_SENHA} a ${MAX_SENHA} caracteres`}
               value={senha}
               onBlur={() => marcarTocado("senha")}
               onChange={(e) => {
-                setSenha(e.target.value);
+                setSenha(e.target.value.slice(0, MAX_SENHA));
                 if (!tocados.senha) marcarTocado("senha");
                 limparErroGeral();
               }}
@@ -618,14 +642,14 @@ export default function CadastroTecnico() {
             </button>
           </div>
 
-          {senha.length > 0 && senha.length < 6 && (
+          {senha.length > 0 && senha.length < MIN_SENHA && (
             <span className="texto-erro-campo">
-              Mínimo de 6 caracteres (faltam {6 - senha.length}).
+              Mínimo de {MIN_SENHA} caracteres (faltam {MIN_SENHA - senha.length}).
             </span>
           )}
-          {senha.length >= 6 && (
+          {senha.length >= MIN_SENHA && senha.length <= MAX_SENHA && (
             <span className="texto-sucesso-campo">
-              ✓ Tamanho mínimo atingido ({senha.length} caracteres).
+              ✓ Senha válida ({senha.length}/{MAX_SENHA} caracteres).
             </span>
           )}
           {(tocados.senha || tentouEnviar) && senha.length === 0 && (
@@ -633,23 +657,23 @@ export default function CadastroTecnico() {
           )}
         </div>
 
-        {/* CONFIRMAR SENHA */}
         <div className="campo">
           <label htmlFor="tec-confirmar-senha">Confirmar Senha *</label>
           <div className="input-senha-wrapper">
             <input
               id="tec-confirmar-senha"
               type={verConfirmarSenha ? "text" : "password"}
+              maxLength={MAX_SENHA}
               className={
                 (tocados.confirmarSenha || tentouEnviar) && erroConfirmarSenha
                   ? "input-invalido"
                   : ""
               }
-              placeholder="Repita sua senha"
+              placeholder="Repita a senha"
               value={confirmarSenha}
               onBlur={() => marcarTocado("confirmarSenha")}
               onChange={(e) => {
-                setConfirmarSenha(e.target.value);
+                setConfirmarSenha(e.target.value.slice(0, MAX_SENHA));
                 if (!tocados.confirmarSenha) marcarTocado("confirmarSenha");
                 limparErroGeral();
               }}
@@ -667,15 +691,17 @@ export default function CadastroTecnico() {
           {confirmarSenha.length > 0 && senha !== confirmarSenha && (
             <span className="texto-erro-campo">As senhas não coincidem.</span>
           )}
-          {confirmarSenha.length > 0 && senha === confirmarSenha && senha.length >= 6 && (
-            <span className="texto-sucesso-campo">✓ As senhas coincidem.</span>
-          )}
+          {confirmarSenha.length > 0 &&
+            senha === confirmarSenha &&
+            senha.length >= MIN_SENHA &&
+            senha.length <= MAX_SENHA && (
+              <span className="texto-sucesso-campo">✓ As senhas coincidem.</span>
+            )}
           {(tocados.confirmarSenha || tentouEnviar) && confirmarSenha.length === 0 && (
             <span className="texto-erro-campo">Confirme sua senha.</span>
           )}
         </div>
 
-        {/* TERMOS DE USO */}
         <div className="campo-termos">
           <label className="label-termos">
             <input

@@ -5,6 +5,24 @@ export default function BotaoMenu({ currentStatus, onToggleStatus, label = "Edit
   const [menuAberto, setMenuAberto] = useState(false);
   const [working, setWorking] = useState(false);
 
+  // 1. Pegue o logout da store no topo do MenuLateral:
+const { user, logout } = useAuthStore();
+
+// 2. No botão Sair:
+<li className="opcao-item sair">
+  <Link
+    to="/"
+    className="link-wrapper link-sair"
+    onClick={() => {
+      logout();
+      fechar();
+    }}
+  >
+    <img className="menu-icon" src={iconLogout} alt="" />
+    <span>Sair</span>
+  </Link>
+</li>
+
   const alternarMenu = () => {
     setMenuAberto(!menuAberto);
   };

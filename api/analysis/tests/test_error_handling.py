@@ -1,5 +1,7 @@
 from unittest.mock import patch
 
+from analysis.models.search_request_model import SearchRequest
+from analysis.models.search_error_log_model import SearchErrorLog
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.exceptions import NotFound, PermissionDenied
@@ -7,6 +9,53 @@ from rest_framework.test import APITestCase
 from users.models.user_model import User
 
 class AnalysisErrorHandlingTests(APITestCase):
+
+    def test_detalhes_de_analise_com_falha_retorna_erro_amigavel(self):
+        analise = SearchRequest.objects.create(
+            user=self.user,
+            image="analysis/imagem_teste.jpg",
+            result_type=SearchRequest.RESULT_ERROR,
+            status=SearchRequest.STATUS_FAILED
+        )
+
+        SearchErrorLog.objects.create(
+            search_request=analise,
+            request_date=analise.request_date,
+            status_code=503,
+            error_type=SearchErrorLog.ERROR_API_UNAVAILABLE,
+            error_description="503 UNAVAILABLE: modelo com alta demanda",
+            error_response="Resposta técnica do provedor"
+        )
+
+        response = self.client.get(
+            reverse(
+                "analysis-detail",
+                kwargs={"pk": analise.id}
+            ),
+            {"userId": self.user.id}
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+            response.data
+        )
+
+        self.assertEqual(response.data["search_request_id"], analise.id)
+        self.assertEqual(response.data["status"], SearchRequest.STATUS_FAILED)
+
+        self.assertEqual(
+            response.data["error"]["code"],
+            "AI_SERVICE_UNAVAILABLE"
+        )
+
+        self.assertEqual(
+            response.data["error"]["title"],
+            "Serviço de análise indisponível"
+        )
+
+        self.assertIn("Tente novamente", response.data["error"]["message"])
+
     def setUp(self):
         self.user = User.objects.create(
             name="Usuario Teste",

@@ -491,3 +491,56 @@ body {
   font-weight: 500;
   display: inline-block;
 }
+
+#container-selecao{
+    margin-left: 120px;
+    margin-right: 120px;
+}
+
+#submit-info{
+    margin-top: 20px;
+}
+
+#fotoselecionar{
+    gap: 20px;
+}
+
+#fotoselecionar label{
+    font-size: 15px;
+    padding: 2px;
+}
+
+#arquivo label{
+    padding: 2px;
+}
+
+#bem-vindo{
+    text-align:left !important;
+    margin-left: 0 !important;
+    margin-bottom: 10px !important;
+    font-size: 22px !important;
+}
+
+#subtitulo{
+    text-align:left !important;
+    margin-left: 0 !important;
+    margin-bottom: 15px !important;
+    font-size: 15px !important;
+}
+
+#corpo{
+    margin-top: 0px;
+}
+
+#btn-enviar{
+    background-color: #04724b;
+    color: #ffffff;
+    border: 2px solid #04724b;
+    border-radius: 20px;
+    padding: 12px 40px;
+    font-size: 15px;
+    font-family: 'Montserrat', sans-serif;
+    cursor: pointer;
+    transition: 0.3s;
+    margin: 0px;
+}

@@ -5,6 +5,12 @@ import useAuthStore from "../../stores/authStore";
 import logo from "../../assets/images/Logo-AnalisaAI.png";
 import "./Cadastrar.css";
 
+const LIMITE_NOME = 100;
+const LIMITE_FAZENDA = 100;
+const LIMITE_LOCALIDADE = 100;
+const MIN_SENHA = 6;
+const MAX_SENHA = 8;
+
 export default function CadastroProdutor() {
   const navigate = useNavigate();
   const { register, loading: storeLoading } = useAuthStore();
@@ -21,7 +27,6 @@ export default function CadastroProdutor() {
   const [aceitouTermos, setAceitouTermos] = useState(false);
   const [tentouEnviar, setTentouEnviar] = useState(false);
 
-  // Controla quais campos o usuário já interagiu/saiu para mostrar erros em tempo real
   const [tocados, setTocados] = useState({
     nome: false,
     telefone: false,
@@ -72,7 +77,10 @@ export default function CadastroProdutor() {
       });
   }, [estadoSelecionado]);
 
-  // Formata automaticamente para (XX) XXXXX-XXXX ou (XX) XXXX-XXXX
+  const apenasTexto = (valor, limite) => {
+    return valor.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ\s]/g, "").slice(0, limite);
+  };
+
   const formatarTelefone = (valor) => {
     const nums = valor.replace(/\D/g, "").slice(0, 11);
     if (nums.length <= 2) return nums;
@@ -86,10 +94,10 @@ export default function CadastroProdutor() {
   const digitosTelefone = telefone.replace(/\D/g, "");
   const telefoneValido = digitosTelefone.length >= 10 && digitosTelefone.length <= 11;
 
-  // Regras de validação em tempo real
   const erroNome = (() => {
     if (!nome.trim()) return "O nome é obrigatório.";
     if (nome.trim().length < 3) return "Digite pelo menos 3 caracteres.";
+    if (nome.length > LIMITE_NOME) return `Máximo de ${LIMITE_NOME} caracteres.`;
     return "";
   })();
 
@@ -103,9 +111,12 @@ export default function CadastroProdutor() {
 
   const erroSenha = (() => {
     if (!senha) return "A senha é obrigatória.";
-    if (senha.length < 6) {
-      const faltam = 6 - senha.length;
-      return `Mínimo de 6 caracteres (faltam ${faltam}).`;
+    if (senha.length < MIN_SENHA) {
+      const faltam = MIN_SENHA - senha.length;
+      return `Mínimo de ${MIN_SENHA} caracteres (faltam ${faltam}).`;
+    }
+    if (senha.length > MAX_SENHA) {
+      return `Máximo de ${MAX_SENHA} caracteres.`;
     }
     return "";
   })();
@@ -263,7 +274,6 @@ export default function CadastroProdutor() {
         Voltar
       </button>
 
-      {/* BANNER EM FORMATO PÍLULA FIGMA */}
       {erroGeral && (
         <div className="cadastro-erro-banner">
           <span className="cadastro-erro-icon">!</span>
@@ -274,18 +284,18 @@ export default function CadastroProdutor() {
       <form onSubmit={finalizar} noValidate>
         <h4>Informações Pessoais</h4>
 
-        {/* NOME */}
         <div className="campo">
           <label htmlFor="cad-nome">Nome *</label>
           <input
             id="cad-nome"
             type="text"
+            maxLength={LIMITE_NOME}
             className={(tocados.nome || tentouEnviar) && erroNome ? "input-invalido" : ""}
             placeholder="Digite o seu nome completo"
             value={nome}
             onBlur={() => marcarTocado("nome")}
             onChange={(e) => {
-              setNome(e.target.value);
+              setNome(apenasTexto(e.target.value, LIMITE_NOME));
               limparErroGeral();
             }}
           />
@@ -294,12 +304,12 @@ export default function CadastroProdutor() {
           )}
         </div>
 
-        {/* TELEFONE */}
         <div className="campo">
           <label htmlFor="cad-telefone">Telefone com DDD *</label>
           <input
             id="cad-telefone"
             type="tel"
+            maxLength={15}
             className={(tocados.telefone || tentouEnviar) && erroTelefone ? "input-invalido" : ""}
             placeholder="Ex.: (88) 99999-9999"
             value={telefone}
@@ -314,19 +324,19 @@ export default function CadastroProdutor() {
           )}
         </div>
 
-        {/* SENHA */}
         <div className="campo">
           <label htmlFor="cad-senha">Senha *</label>
           <div className="input-senha-wrapper">
             <input
               id="cad-senha"
               type={verSenha ? "text" : "password"}
+              maxLength={MAX_SENHA}
               className={(tocados.senha || tentouEnviar) && erroSenha ? "input-invalido" : ""}
-              placeholder="Mínimo de 6 caracteres"
+              placeholder={`De ${MIN_SENHA} a ${MAX_SENHA} caracteres`}
               value={senha}
               onBlur={() => marcarTocado("senha")}
               onChange={(e) => {
-                setSenha(e.target.value);
+                setSenha(e.target.value.slice(0, MAX_SENHA));
                 if (!tocados.senha) marcarTocado("senha");
                 limparErroGeral();
               }}
@@ -341,15 +351,14 @@ export default function CadastroProdutor() {
             </button>
           </div>
 
-          {/* Feedback dinâmico em tempo real da senha */}
-          {senha.length > 0 && senha.length < 6 && (
+          {senha.length > 0 && senha.length < MIN_SENHA && (
             <span className="texto-erro-campo">
-              Mínimo de 6 caracteres (faltam {6 - senha.length}).
+              Mínimo de {MIN_SENHA} caracteres (faltam {MIN_SENHA - senha.length}).
             </span>
           )}
-          {senha.length >= 6 && (
+          {senha.length >= MIN_SENHA && senha.length <= MAX_SENHA && (
             <span className="texto-sucesso-campo">
-              ✓ Tamanho mínimo atingido ({senha.length} caracteres).
+              ✓ Senha válida ({senha.length}/{MAX_SENHA} caracteres).
             </span>
           )}
           {(tocados.senha || tentouEnviar) && senha.length === 0 && (
@@ -357,13 +366,13 @@ export default function CadastroProdutor() {
           )}
         </div>
 
-        {/* CONFIRMAR SENHA */}
         <div className="campo">
           <label htmlFor="cad-confirmar-senha">Confirmar Senha *</label>
           <div className="input-senha-wrapper">
             <input
               id="cad-confirmar-senha"
               type={verConfirmarSenha ? "text" : "password"}
+              maxLength={MAX_SENHA}
               className={
                 (tocados.confirmarSenha || tentouEnviar) && erroConfirmarSenha
                   ? "input-invalido"
@@ -373,7 +382,7 @@ export default function CadastroProdutor() {
               value={confirmarSenha}
               onBlur={() => marcarTocado("confirmarSenha")}
               onChange={(e) => {
-                setConfirmarSenha(e.target.value);
+                setConfirmarSenha(e.target.value.slice(0, MAX_SENHA));
                 if (!tocados.confirmarSenha) marcarTocado("confirmarSenha");
                 limparErroGeral();
               }}
@@ -391,9 +400,12 @@ export default function CadastroProdutor() {
           {confirmarSenha.length > 0 && senha !== confirmarSenha && (
             <span className="texto-erro-campo">As senhas não coincidem.</span>
           )}
-          {confirmarSenha.length > 0 && senha === confirmarSenha && senha.length >= 6 && (
-            <span className="texto-sucesso-campo">✓ As senhas coincidem.</span>
-          )}
+          {confirmarSenha.length > 0 &&
+            senha === confirmarSenha &&
+            senha.length >= MIN_SENHA &&
+            senha.length <= MAX_SENHA && (
+              <span className="texto-sucesso-campo">✓ As senhas coincidem.</span>
+            )}
           {(tocados.confirmarSenha || tentouEnviar) && confirmarSenha.length === 0 && (
             <span className="texto-erro-campo">Confirme sua senha.</span>
           )}
@@ -406,6 +418,7 @@ export default function CadastroProdutor() {
           <input
             id="cad-fazenda"
             type="text"
+            maxLength={LIMITE_FAZENDA}
             className={
               (preencheuAlgumDadoFazenda || tentouEnviar) &&
               preencheuAlgumDadoFazenda &&
@@ -416,7 +429,7 @@ export default function CadastroProdutor() {
             placeholder="Digite o nome da fazenda"
             value={nomeFazenda}
             onChange={(e) => {
-              setNomeFazenda(e.target.value);
+              setNomeFazenda(apenasTexto(e.target.value, LIMITE_FAZENDA));
               limparErroGeral();
             }}
           />
@@ -484,13 +497,14 @@ export default function CadastroProdutor() {
           <input
             id="cad-localidade"
             type="text"
+            maxLength={LIMITE_LOCALIDADE}
             className={
               preencheuAlgumDadoFazenda && !localidade.trim() ? "input-invalido" : ""
             }
             placeholder="Ex.: Distrito, Sítio, Zona Rural"
             value={localidade}
             onChange={(e) => {
-              setLocalidade(e.target.value);
+              setLocalidade(apenasTexto(e.target.value, LIMITE_LOCALIDADE));
               limparErroGeral();
             }}
           />
@@ -501,7 +515,6 @@ export default function CadastroProdutor() {
           )}
         </div>
 
-        {/* TERMOS DE USO */}
         <div className="campo-termos">
           <label className="label-termos">
             <input
