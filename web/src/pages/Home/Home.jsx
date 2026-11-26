@@ -19,12 +19,9 @@ export default function Home() {
   const [carregando, setCarregando] = useState(false);
   const [imageBase64, setImageBase64] = useState("");
   const [erroEnvio, setErroEnvio] = useState(null);
+  const [tipoErro, setTipoErro] = useState("arquivo"); // "arquivo" | "analise"
 
-  const {
-    createAnalysis,
-    searchRequestId,
-    error: storeError,
-  } = useAnalysisStore();
+  const { createAnalysis, searchRequestId } = useAnalysisStore();
 
   const { user } = useAuthStore();
   const navigate = useNavigate();
@@ -39,7 +36,7 @@ export default function Home() {
   ];
 
   const aoSelecionarFoto = async (event) => {
-    const arquivo = event.target.files[0];
+    const arquivo = event.target.files?.[0];
 
     if (arquivo) {
       const tipoValido =
@@ -47,9 +44,11 @@ export default function Home() {
         /\.(jpg|jpeg|png|heic|webp|raw)$/i.test(arquivo.name);
 
       if (!tipoValido) {
+        setTipoErro("arquivo");
         setErroEnvio("O arquivo escolhido não é compatível.");
         setImagemPreview(null);
         setImageBase64("");
+        event.target.value = "";
         return;
       }
 
@@ -63,8 +62,11 @@ export default function Home() {
       try {
         const base64Converted = await toBase64(arquivo);
         setImageBase64(base64Converted);
-      } catch (err) {
+      } catch {
+        setTipoErro("arquivo");
         setErroEnvio("O arquivo escolhido não é compatível.");
+        setImagemPreview(null);
+        setImageBase64("");
       }
     }
   };
@@ -78,15 +80,84 @@ export default function Home() {
     setErroEnvio(null);
   };
 
+  const extrairMensagemBackend = (err) => {
+    const data = err?.response?.data;
+    if (!data) return "";
+    if (typeof data === "string") return data;
+
+    const candidato =
+      data.message ||
+      data.detail ||
+      data.error ||
+      data.erro ||
+      data.image ||
+      data.non_field_errors;
+
+    if (Array.isArray(candidato)) {
+      return candidato.join(" ");
+    }
+    if (typeof candidato === "object" && candidato !== null) {
+      return Object.values(candidato).flat().join(" ");
+    }
+    return String(candidato || "");
+  };
+
+  const interpretarErroAnalise = (err) => {
+    const msgBackend = extrairMensagemBackend(err);
+    const texto = msgBackend.toLowerCase();
+
+    // Ignora mensagens técnicas do Axios/HTTP (ex: "Request failed with status code 400")
+    const ehMensagemTecnica =
+      !msgBackend ||
+      texto.includes("request failed") ||
+      texto.includes("status code") ||
+      texto.includes("network error") ||
+      texto.includes("timeout") ||
+      texto.includes("<!doctype html");
+
+    if (
+      texto.includes("not a plant") ||
+      texto.includes("no plant") ||
+      texto.includes("não é uma planta") ||
+      texto.includes("nao e uma planta") ||
+      texto.includes("não corresponde a uma planta") ||
+      texto.includes("invalid image content") ||
+      texto.includes("nenhuma planta")
+    ) {
+      return "A imagem enviada não corresponde a uma planta. Envie a foto de uma folha, caule ou planta inteira.";
+    }
+
+    if (
+      texto.includes("not identified") ||
+      texto.includes("unknown") ||
+      texto.includes("low confidence") ||
+      texto.includes("não foi possível identificar") ||
+      texto.includes("nao foi possivel identificar") ||
+      texto.includes("unrecognized") ||
+      texto.includes("não encontrada") ||
+      texto.includes("nao encontrada")
+    ) {
+      return "Não foi possível identificar a planta na imagem. Tente tirar uma foto mais próxima e com boa iluminação.";
+    }
+
+    if (!ehMensagemTecnica && msgBackend.length <= 160) {
+      return msgBackend;
+    }
+
+    return "A imagem enviada não corresponde a uma planta ou não pôde ser identificada. Tente novamente com outra foto.";
+  };
+
   const confirmarEnvio = async (e) => {
     e.preventDefault();
 
     if (!user?.id) {
+      setTipoErro("analise");
       setErroEnvio("Sessão inválida. Faça login novamente.");
       return;
     }
 
     if (!imageBase64) {
+      setTipoErro("arquivo");
       setErroEnvio("Por favor, selecione uma imagem válida.");
       return;
     }
@@ -96,7 +167,29 @@ export default function Home() {
       setErroEnvio(null);
 
       const result = await createAnalysis(imageBase64, user.id);
-      const activeSearchId = result?.search_request_id || searchRequestId;
+
+      const statusRetorno = String(
+        result?.status || result?.classification || result?.message || ""
+      ).toLowerCase();
+
+      if (
+        result?.is_plant === false ||
+        statusRetorno.includes("not_a_plant") ||
+        statusRetorno.includes("não é uma planta")
+      ) {
+        setCarregando(false);
+        setTipoErro("analise");
+        setErroEnvio(
+          "A imagem enviada não corresponde a uma planta. Por favor, selecione a foto de uma planta."
+        );
+        return;
+      }
+
+      const activeSearchId =
+        result?.search_request_id ||
+        result?.id ||
+        useAnalysisStore.getState().searchRequestId ||
+        searchRequestId;
 
       setCarregando(false);
 
@@ -107,14 +200,16 @@ export default function Home() {
           },
         });
       } else {
-        setErroEnvio("Não foi possível obter o código de confirmação da análise.");
+        setTipoErro("analise");
+        setErroEnvio(
+          "Não foi possível identificar a planta na imagem enviada. Tente novamente."
+        );
       }
     } catch (err) {
       console.error("ERRO REAL AO ANALISAR:", err);
       setCarregando(false);
-      setErroEnvio(
-        storeError || "Ocorreu um erro ao analisar a planta. Tente novamente."
-      );
+      setTipoErro("analise");
+      setErroEnvio(interpretarErroAnalise(err));
     }
   };
 
@@ -169,24 +264,40 @@ export default function Home() {
                 <p>{erroEnvio}</p>
               </div>
 
-              <p className="subtexto-erro-incompativel">
-                Seu arquivo não possui um formato compatível ou pode estar corrompido.<br />
-                Tente novamente.
-              </p>
+              {tipoErro === "arquivo" ? (
+                <>
+                  <p className="subtexto-erro-incompativel">
+                    Seu arquivo não possui um formato compatível ou pode estar corrompido.
+                    <br />
+                    Tente novamente.
+                  </p>
 
-              <div className="box-icone-arquivo-erro">
-                <div className="icone-documento-invalido">📄</div>
-              </div>
+                  <div className="box-icone-arquivo-erro">
+                    <div className="icone-documento-invalido">📄</div>
+                  </div>
 
-              <p className="formatos-aceitos-texto">
-                Formatos aceitos: .jpg, .png, .heic, .webp e .raw
-              </p>
+                  <p className="formatos-aceitos-texto">
+                    Formatos aceitos: .jpg, .png, .heic, .webp e .raw
+                  </p>
+                </>
+              ) : (
+                <p className="subtexto-erro-incompativel">
+                  Certifique-se de que a foto mostra claramente uma planta, com boa iluminação e foco, sem outros objetos cobrindo a folha.
+                </p>
+              )}
 
               <div className="botoes-erro-incompativel">
                 <button
                   type="button"
                   className="btn-voltar-home"
-                  onClick={() => setErroEnvio(null)}
+                  onClick={() => {
+                    if (imagemPreview) {
+                      URL.revokeObjectURL(imagemPreview);
+                    }
+                    setErroEnvio(null);
+                    setImagemPreview(null);
+                    setImageBase64("");
+                  }}
                 >
                   Voltar
                 </button>

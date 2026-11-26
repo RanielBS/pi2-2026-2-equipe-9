@@ -619,3 +619,161 @@ body {
         padding-bottom: 32px;
     }
 }
+
+/* ==================== HERO APRESENTAÇÃO DO TÉCNICO ==================== */
+
+.tecnico-hero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 48px;
+    margin: 36px clamp(20px, 8vw, 120px) 44px clamp(20px, 8vw, 120px);
+    padding: 36px 40px;
+    border-radius: 24px;
+}
+
+.tecnico-hero-ilustracao {
+    flex-shrink: 0;
+    width: 230px;
+    height: 230px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tecnico-hero-ilustracao svg {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.35));
+}
+
+.tecnico-hero-conteudo {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+}
+
+.tecnico-hero-badge {
+    display: inline-block;
+    border: 1px solid #009963;
+    color: #5eead4;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 20px;
+    margin-bottom: 14px;
+}
+
+.tecnico-hero-titulo {
+    font-family: 'Montserrat', sans-serif;
+    font-size: clamp(22px, 3vw, 30px);
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1.25;
+    margin-bottom: 14px;
+}
+
+.tecnico-hero-descricao {
+    font-family: 'Montserrat', sans-serif;
+    font-size: clamp(14px, 1.5vw, 16px);
+    font-weight: 400;
+    color: #e2e8f0;
+    line-height: 1.65;
+    margin-bottom: 24px;
+    max-width: 680px;
+}
+
+.tecnico-hero-descricao strong {
+    color: #5eead4;
+    font-weight: 600;
+}
+
+.tecnico-hero-acoes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+}
+
+.btn-hero-primario {
+    background-color: #04724b;
+    color: #ffffff;
+    border: 2px solid #009963;
+    border-radius: 24px;
+    padding: 12px 26px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.btn-hero-primario:hover {
+    background-color: #009963;
+    transform: translateY(-2px);
+}
+
+.btn-hero-secundario {
+    background-color: transparent;
+    color: #ffffff;
+    border: 2px solid rgba(255, 255, 255, 0.6);
+    border-radius: 24px;
+    padding: 12px 24px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.btn-hero-secundario:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+    border-color: #ffffff;
+    transform: translateY(-2px);
+}
+
+.tecnico-divisor {
+    border: none;
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(0, 153, 99, 0.5) 50%,
+        transparent 100%
+    );
+    margin: 0 clamp(20px, 8vw, 120px) 28px clamp(20px, 8vw, 120px);
+}
+
+@media (max-width: 860px) {
+    .tecnico-hero {
+        flex-direction: column;
+        text-align: center;
+        padding: 28px 22px;
+        gap: 24px;
+    }
+
+    .tecnico-hero-ilustracao {
+        width: 170px;
+        height: 170px;
+    }
+
+    .tecnico-hero-conteudo {
+        align-items: center;
+        text-align: center;
+    }
+
+    .tecnico-hero-acoes {
+        justify-content: center;
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .btn-hero-primario,
+    .btn-hero-secundario {
+        width: 100%;
+    }
+}

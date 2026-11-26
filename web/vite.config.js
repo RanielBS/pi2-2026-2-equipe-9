@@ -10,12 +10,12 @@ export default defineConfig({
 
     proxy: {
       "/api": {
-        target: "http://api:10000",
+        target: "http://api:8000",
         changeOrigin: true,
       },
 
       "/media": {
-        target: "http://api:10000",
+        target: "http://api:8000",
         changeOrigin: true,
       },
     },
