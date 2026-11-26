@@ -9,6 +9,12 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
+  const ehLogin = config.url?.includes("users/login");
+
+  if (ehLogin) {
+    return config;
+  }
+
   const token = useAuthStore.getState().token;
 
   if (token) {

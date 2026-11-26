@@ -142,13 +142,35 @@ class UserService:
     @staticmethod
     def login(dto: LoginDto):
 
-        user = User.objects.filter(phone=dto.phone).first()
+        if dto.login_identifier:
+            user = User.objects.filter(
+                login_identifier=dto.login_identifier,
+                role=UserRole.ADMIN,
+                is_admin=True
+            ).first()
+
+            mensagem_erro = "Identificador ou senha incorretos"
+
+        elif dto.phone:
+            user = User.objects.filter(
+                phone=dto.phone,
+                role__in=[
+                    UserRole.PRODUCER,
+                    UserRole.TECHNICIAN
+                ],
+                is_admin=False
+            ).first()
+
+            mensagem_erro = "Telefone ou senha incorretos"
+
+        else:
+            raise ParseError("Informe telefone ou identificador.")
 
         if not user:
-            raise ParseError("Telefone ou senha incorretos")
+            raise ParseError(mensagem_erro)
 
         if not check_password(dto.password, user.password_hash):
-            raise ParseError("Telefone ou senha incorretos")
+            raise ParseError(mensagem_erro)
 
         if user.status != UserStatus.ACTIVE:
             raise ParseError("Esta conta está inativa ou bloqueada.")
@@ -171,13 +193,16 @@ class UserService:
             "token": token,
             "user": UserService._user_data(user, farm)
         }
-
     @staticmethod
     @transaction.atomic
     def create_admin(dto):
 
-        if User.objects.filter(phone=dto.phone).exists():
-            raise ParseError("Telefone já existe")
+        login_identifier = dto.login_identifier.strip().lower()
+
+        if User.objects.filter(
+            login_identifier=login_identifier
+        ).exists():
+            raise ParseError("Identificador administrativo já existe")
 
         requester = User.objects.filter(
             id=dto.requested_by
@@ -186,14 +211,19 @@ class UserService:
         if not requester:
             raise ParseError("Usuário solicitante não encontrado")
 
-        if not requester.is_admin or requester.status != UserStatus.ACTIVE:
+        if (
+            not requester.is_admin
+            or requester.role != UserRole.ADMIN
+            or requester.status != UserStatus.ACTIVE
+        ):
             raise ParseError(
                 "Apenas administradores ativos podem criar administradores"
             )
 
         user = User.objects.create(
             name=dto.name,
-            phone=dto.phone,
+            phone=None,
+            login_identifier=login_identifier,
             password_hash=make_password(dto.password),
             is_admin=True,
             role=UserRole.ADMIN,

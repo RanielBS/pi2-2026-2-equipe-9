@@ -61,12 +61,17 @@ class UserViewSet(viewsets.ViewSet):
 
     @extend_schema(
         summary="Fazer Login",
-        description="Autentica um usuário com telefone e senha.",
+        description=(
+            "Autentica produtores e técnicos com telefone, "
+            "e administradores com identificador administrativo."
+        ),
         request=LoginSerializer,
         responses={
             200: LoginResponseSerializer,
             400: {"description": "Dados inválidos"},
-            401: {"description": "Telefone ou senha incorretos"},
+            401: {
+                "description": "Telefone ou identificador e senha incorretos"
+            },
         },
     )
     @action(detail=False, methods=["post"])
@@ -106,7 +111,10 @@ class UserViewSet(viewsets.ViewSet):
 
     @extend_schema(
         summary="Registrar Administrador",
-        description="Cria um novo administrador.",
+        description=(
+            "Cria um administrador usando identificador de acesso, "
+            "sem exigir telefone. Exige administrador ativo."
+        ),
         request=RegisterAdminSerializer,
         responses={
             201: RegisterUserResponseSerializer,
@@ -131,13 +139,22 @@ class UserViewSet(viewsets.ViewSet):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        if not request.user.is_admin:
+        if (
+            not request.user.is_admin
+            or request.user.role != "admin"
+            or request.user.status != 1
+        ):
             logger.warning(
                 "[HTTP 403 Forbidden] Usuário sem permissão "
                 "tentou criar um administrador."
             )
             return Response(
-                {"message": "Apenas administradores podem criar administradores."},
+                {
+                    "message": (
+                        "Apenas administradores ativos podem "
+                        "criar administradores."
+                    )
+                },
                 status=status.HTTP_403_FORBIDDEN,
             )
 

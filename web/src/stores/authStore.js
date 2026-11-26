@@ -38,51 +38,72 @@ const useAuthStore = create((set) => ({
   loading: false,
   error: null,
 
-  login: async (telefone, password) => {
-    set({ loading: true, error: null });
 
-    try {
-      const response = await api.post("users/login/", {
-        phone: formatPhoneE164(telefone),
-        password,
-      });
 
-      const data = response.data;
-      const userData = data.user || data;
-      const tokenRecebido = data.token || data.access;
+login: async (telefoneOuIdentificador, password) => {
+  set({ loading: true, error: null });
 
-      const papelNormalizado = normalizarPapel(userData);
+  try {
+    const entrada = telefoneOuIdentificador.trim();
+    const somenteNumeros = entrada.replace(/\D/g, "");
 
-      const usuario = {
-        ...userData,
-        role: papelNormalizado,
-        is_admin: userData.is_admin === true || papelNormalizado === "admin",
-        is_technician: userData.is_technician === true || papelNormalizado === "tecnico",
-      };
+    const ehTelefone =
+  (somenteNumeros.length >= 10 && somenteNumeros.length <= 11) ||
+  (somenteNumeros.startsWith("55") &&
+    (somenteNumeros.length === 12 || somenteNumeros.length === 13));
 
-      if (tokenRecebido) {
-        localStorage.setItem("token", tokenRecebido);
-      }
-      localStorage.setItem("user", JSON.stringify(usuario));
+    const dadosLogin = ehTelefone
+      ? {
+          phone: formatPhoneE164(entrada),
+          password,
+        }
+      : {
+          login_identifier: entrada.toLowerCase(),
+          password,
+        };
 
-      set({
-        user: usuario,
-        token: tokenRecebido,
-        isAuthenticated: Boolean(tokenRecebido),
-        loading: false,
-        error: null,
-      });
+    const response = await api.post("users/login/", dadosLogin);
 
-      return usuario;
-    } catch (error) {
-      const msg =
-        error?.response?.data?.message ||
-        error?.response?.data?.detail ||
-        "Erro ao realizar login.";
-      set({ loading: false, error: msg });
-      throw error;
+    const data = response.data;
+    const userData = data.user || data;
+    const tokenRecebido = data.token || data.access;
+
+    const papelNormalizado = normalizarPapel(userData);
+
+    const usuario = {
+      ...userData,
+      role: papelNormalizado,
+      is_admin: userData.is_admin === true || papelNormalizado === "admin",
+      is_technician:
+        userData.is_technician === true || papelNormalizado === "tecnico",
+    };
+
+    if (tokenRecebido) {
+      localStorage.setItem("token", tokenRecebido);
     }
-  },
+
+    localStorage.setItem("user", JSON.stringify(usuario));
+
+    set({
+      user: usuario,
+      token: tokenRecebido,
+      isAuthenticated: Boolean(tokenRecebido),
+      loading: false,
+      error: null,
+    });
+
+    return usuario;
+  } catch (error) {
+    const msg =
+      error?.response?.data?.message ||
+      error?.response?.data?.detail ||
+      "Erro ao realizar login.";
+
+    set({ loading: false, error: msg });
+    throw error;
+  }
+},
+
 
   register: async (payload) => {
     set({ loading: true, error: null });

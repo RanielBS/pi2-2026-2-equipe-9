@@ -1,4 +1,4 @@
-from phonenumber_field.serializerfields import PhoneNumberField
+
 from rest_framework import serializers
 
 from users.dtos.register_admin_dto import RegisterAdminDTO
@@ -13,9 +13,11 @@ class RegisterAdminSerializer(serializers.Serializer):
         required=True
     )
 
-    phone = PhoneNumberField(
-        region="BR",
-        required=True
+    login_identifier = serializers.CharField(
+        max_length=50,
+        required=True,
+        allow_blank=False,
+        trim_whitespace=True
     )
 
     password = serializers.CharField(
@@ -28,6 +30,9 @@ class RegisterAdminSerializer(serializers.Serializer):
         write_only=True,
         required=True
     )
+
+    def validate_login_identifier(self, value):
+        return value.strip().lower()
 
     def validate(self, data):
 
@@ -46,6 +51,6 @@ class RegisterAdminSerializer(serializers.Serializer):
         return RegisterAdminDTO(
             requested_by=self.validated_data["requested_by"],
             name=self.validated_data["name"],
-            phone=str(self.validated_data["phone"]),
+            login_identifier=self.validated_data["login_identifier"],
             password=self.validated_data["password"]
         )

@@ -23,7 +23,20 @@ class User(models.Model):
     id = models.BigAutoField(primary_key=True)
 
     name = models.CharField(max_length=150)
-    phone = models.CharField(max_length=20)
+
+    phone = models.CharField(
+        max_length=20,
+        null=True,
+        blank=True
+    )
+
+    login_identifier = models.CharField(
+        max_length=50,
+        unique=True,
+        null=True,
+        blank=True
+    )
+
     password_hash = models.CharField(max_length=255)
 
     @property

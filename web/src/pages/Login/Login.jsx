@@ -19,11 +19,19 @@ export default function Login() {
   const [carregandoLocal, setCarregandoLocal] = useState(false);
 
   // Validação do formato de telefone (DDD + 8 ou 9 dígitos)
-  const validarTelefone = (tel) => {
-    const apenasNumeros = tel.replace(/\D/g, "");
-    return apenasNumeros.length >= 10 && apenasNumeros.length <= 11;
-  };
+  const validarEntrada = (entrada) => {
+  const valor = entrada.trim();
+  const apenasNumeros = valor.replace(/\D/g, "");
 
+  const ehTelefone =
+    (apenasNumeros.length >= 10 && apenasNumeros.length <= 11) ||
+    (apenasNumeros.startsWith("55") &&
+      (apenasNumeros.length === 12 || apenasNumeros.length === 13));
+
+  const ehIdentificador = /^[a-zA-Z0-9._-]+$/.test(valor);
+
+  return ehTelefone || ehIdentificador;
+};
   const entrar = async (e) => {
     e.preventDefault();
     setErroLogin("");
@@ -35,10 +43,10 @@ export default function Login() {
     }
 
     // 2. Validação do formato do telefone
-    if (!validarTelefone(telefone)) {
-      setErroLogin("O formato do telefone é inválido. Tente novamente.");
-      return;
-    }
+    if (!validarEntrada(telefone)) {
+  setErroLogin("Informe um telefone válido ou identificador de acesso.");
+  return;
+}
 
     // Ativa a tela de carregamento localmente
     setCarregandoLocal(true);
@@ -152,10 +160,10 @@ export default function Login() {
       <form onSubmit={entrar}>
         <div id="inputs">
           <div id="telefone">
-            <label htmlFor="inputTelefone">Telefone com DDD</label>
+            <label htmlFor="inputTelefone">Telefone ou identificador</label>
             <input
               id="inputTelefone"
-              type="tel"
+              type="text"
               placeholder="Ex.: (XX) XXXXX-XXXX"
               value={telefone}
               onChange={(e) => {
